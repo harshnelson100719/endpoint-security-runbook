@@ -1,0 +1,1851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Endpoint Security Runbook</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080C14;--bg2:#0D1220;--bg3:#111827;
+  --surface:#172033;--surface2:#1E2A42;--surface3:#243250;
+  --border:rgba(96,130,200,0.14);--border2:rgba(96,130,200,0.28);
+  --blue:#4F8EF7;--blue-dim:rgba(79,142,247,0.1);
+  --green:#34D399;--green-dim:rgba(52,211,153,0.1);
+  --amber:#FBBF24;--amber-dim:rgba(251,191,36,0.1);
+  --red:#F87171;--red-dim:rgba(248,113,113,0.1);
+  --purple:#A78BFA;--purple-dim:rgba(167,139,250,0.1);
+  --text:#EEF2FF;--text2:#94A3B8;--text3:#4B6080;
+  --display:'Syne',sans-serif;--body:'DM Sans',sans-serif;--mono:'JetBrains Mono',monospace;
+  --risk-critical:#F87171;--risk-high:#FBBF24;--risk-medium:#60A5FA;--risk-low:#34D399;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--body);background:var(--bg);color:var(--text);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle at 15% 15%,rgba(79,142,247,0.05) 0%,transparent 45%),radial-gradient(circle at 85% 85%,rgba(52,211,153,0.035) 0%,transparent 45%),linear-gradient(rgba(79,142,247,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(79,142,247,0.025) 1px,transparent 1px);background-size:100% 100%,100% 100%,48px 48px,48px 48px;pointer-events:none;z-index:0}
+
+/* ===== TOPBAR ===== */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(8,12,20,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 1.5rem}
+.topbar-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:12px;height:54px}
+.brand{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.brand-icon{width:26px;height:26px;border-radius:5px;background:var(--blue-dim);border:1px solid rgba(79,142,247,0.35);display:flex;align-items:center;justify-content:center;font-size:12px}
+.brand-name{font-family:var(--display);font-size:13px;font-weight:700;color:var(--blue)}
+.topbar-divider{width:1px;height:20px;background:var(--border2);flex-shrink:0}
+.topbar-stats{display:flex;align-items:center;gap:10px;flex:1}
+.tstat{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--text3)}
+.tstat-n{font-weight:600;font-size:12px}
+.tstat-n.green{color:var(--green)}.tstat-n.amber{color:var(--amber)}.tstat-n.blue{color:var(--blue)}.tstat-n.red{color:var(--red)}
+.prog-track{height:3px;background:var(--surface2);border-radius:2px;width:120px;overflow:hidden;flex-shrink:0}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:2px;transition:width .5s ease;width:0%}
+.topbar-actions{display:flex;align-items:center;gap:6px;margin-left:auto}
+.tb-btn{background:var(--surface);border:1px solid var(--border);color:var(--text3);border-radius:5px;padding:.3rem .7rem;font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.tb-btn:hover{background:var(--surface2);color:var(--text2);border-color:var(--border2)}
+.tb-btn.edit-active{background:var(--purple-dim);border-color:rgba(167,139,250,.4);color:var(--purple)}
+.tb-btn.primary{background:var(--blue);border-color:var(--blue);color:white}
+.tb-btn.primary:hover{opacity:.85}
+
+/* ===== TAB BAR ===== */
+.tabbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 1.5rem;position:sticky;top:54px;z-index:99}
+.tabbar-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:0}
+.tab{padding:.7rem 1.25rem;font-family:var(--mono);font-size:11px;cursor:pointer;color:var(--text3);border:none;background:none;border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tab:hover{color:var(--text2)}
+.tab.active{color:var(--text);border-bottom-color:var(--blue)}
+.tab-count{background:var(--surface2);border-radius:10px;padding:1px 7px;font-size:9px;font-weight:600}
+.tab.active .tab-count{background:var(--blue-dim);color:var(--blue)}
+.tabbar-right{margin-left:auto;display:flex;align-items:center;gap:6px}
+.search-wrap{position:relative}
+.search-input{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:.35rem .65rem .35rem 1.75rem;font-family:var(--mono);font-size:10px;color:var(--text);outline:none;width:180px;transition:all .15s}
+.search-input:focus{border-color:var(--border2);width:220px}
+.search-input::placeholder{color:var(--text3)}
+.search-icon{position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--text3);pointer-events:none}
+.filter-risk{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:.3rem .55rem;font-family:var(--mono);font-size:10px;color:var(--text3);cursor:pointer;outline:none;transition:all .15s}
+.filter-risk:hover{border-color:var(--border2)}
+
+/* ===== MAIN LAYOUT ===== */
+.page{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:1.5rem}
+
+/* ===== PHASE BLOCK ===== */
+.phase-block{margin-bottom:2rem;border:1px solid var(--border);border-radius:14px;overflow:visible;background:var(--bg2)}
+.phase-block.hidden-all{display:none}
+.phase-header{display:flex;align-items:flex-start;gap:12px;padding:1rem 1.25rem;background:var(--surface);border-bottom:1px solid var(--border);border-radius:14px 14px 0 0;position:relative}
+.phase-icon-wrap{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;margin-top:1px}
+.phase-info{flex:1;min-width:0}
+.phase-name{font-family:var(--display);font-size:15px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:.2rem}
+.phase-name-input{font-family:var(--display);font-size:15px;font-weight:700;background:var(--surface2);border:1px solid var(--purple);border-radius:5px;color:var(--text);padding:.1rem .4rem;outline:none;width:100%;margin-bottom:.2rem;display:none}
+.phase-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.phase-count-badge{font-family:var(--mono);font-size:9px;color:var(--text3);background:var(--surface2);border:1px solid var(--border);padding:1px 7px;border-radius:10px}
+.phase-progress-mini{display:flex;align-items:center;gap:5px}
+.phase-prog-bar{height:3px;width:60px;background:var(--border2);border-radius:2px;overflow:hidden}
+.phase-prog-fill{height:100%;border-radius:2px;background:var(--green);transition:width .4s}
+.phase-prog-pct{font-family:var(--mono);font-size:9px;color:var(--text3)}
+
+/* PHASE NOTE — inline visible */
+.phase-note-row{flex:1;max-width:340px}
+.phase-note-inline{width:100%;background:rgba(167,139,250,0.06);border:1px solid rgba(167,139,250,0.18);border-radius:6px;padding:.35rem .65rem;font-family:var(--body);font-size:11.5px;color:var(--text2);outline:none;resize:none;min-height:34px;line-height:1.5;transition:border-color .15s;overflow:hidden}
+.phase-note-inline:focus{border-color:rgba(167,139,250,.4)}
+.phase-note-inline::placeholder{color:var(--text3);font-style:italic}
+.phase-note-inline:not(:focus):not(:placeholder-shown){background:rgba(167,139,250,0.04);border-color:rgba(167,139,200,0.1)}
+.phase-actions{display:flex;gap:5px;align-items:flex-start;flex-shrink:0}
+.ph-action-btn{background:none;border:none;cursor:pointer;font-size:11px;color:var(--text3);padding:4px;border-radius:4px;transition:all .15s}
+.ph-action-btn:hover{color:var(--text2);background:var(--surface2)}
+.ph-action-btn.del:hover{color:var(--red)}
+.ph-collapse-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text3);border-radius:4px;padding:3px 8px;font-family:var(--mono);font-size:9px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.ph-collapse-btn:hover{color:var(--text2)}
+
+/* ===== ITEM ROW ===== */
+.items-container{padding:.5rem .75rem}
+.phase-block.collapsed .items-container{display:none}
+.phase-block.collapsed .phase-header{border-radius:14px;border-bottom:none}
+
+.item-row{background:var(--bg3);border:1px solid var(--border);border-radius:10px;margin-bottom:.625rem;overflow:hidden;transition:border-color .2s}
+.item-row:hover{border-color:var(--border2)}
+.item-row.status-verified{border-left:3px solid var(--green)}
+.item-row.status-inplace{border-left:3px solid var(--amber)}
+.item-row.status-todo{border-left:3px solid var(--text3)}
+.item-row.item-hidden{display:none}
+.item-row.status-notreq{opacity:0.45;border-left:3px solid #9CA3AF}
+.item-row.status-notreq .item-title-text{text-decoration:line-through;color:var(--text2)}
+.item-check.notreq{background:#6B7280;border-color:#6B7280;color:white;font-size:10px}
+.spill-btn.active-notreq{background:rgba(107,114,128,0.2);border-color:rgba(107,114,128,0.4);color:#9CA3AF}
+.notreq-reason-row{padding:0 .875rem .5rem 2.625rem;display:none}
+.notreq-reason-row.visible{display:flex;align-items:flex-start;gap:8px}
+.notreq-reason-icon{font-size:10px;color:#9CA3AF;margin-top:.3rem;flex-shrink:0}
+.notreq-reason-input{flex:1;background:transparent;border:none;border-bottom:1px solid transparent;font-family:var(--body);font-size:11px;color:#9CA3AF;outline:none;resize:none;min-height:18px;line-height:1.5;transition:all .15s;padding:.1rem 0;font-style:italic}
+.notreq-reason-input:focus{border-bottom-color:#9CA3AF}
+.notreq-reason-input::placeholder{color:#6B7280;font-style:italic}
+.tab.notreq-tab.active{color:var(--text);border-bottom-color:#9CA3AF}
+
+/* ITEM HEADER ROW */
+.item-header{display:flex;align-items:center;gap:10px;padding:.65rem .875rem;cursor:pointer;user-select:none}
+.item-check{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;cursor:pointer;background:transparent}
+.item-check.verified{background:var(--green);border-color:var(--green);color:#0B1910;font-size:10px}
+.item-check.inplace{background:var(--amber);border-color:var(--amber);color:#1a0e00;font-size:10px}
+.status-cycle-hint{font-size:9px;opacity:0}
+.item-row:hover .status-cycle-hint{opacity:1}
+.item-risk-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.item-title-text{font-size:13px;font-weight:500;color:var(--text);flex:1;line-height:1.4}
+.item-title-input{font-size:13px;font-weight:500;background:var(--surface2);border:1px solid var(--purple);border-radius:4px;color:var(--text);padding:.15rem .4rem;outline:none;flex:1;display:none;font-family:var(--body)}
+.item-badges{display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap}
+.ibadge{font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:3px;border:1px solid;font-weight:500}
+.ib-intune{background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.3);color:#93C5FD}
+.ib-s1{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.3);color:#6EE7B7}
+.ib-qualys{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3);color:#FDE68A}
+.ib-entra{background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3);color:#C4B5FD}
+.ib-duo{background:rgba(45,212,191,.1);border-color:rgba(45,212,191,.3);color:#99F6E4}
+.item-est{font-family:var(--mono);font-size:9px;color:var(--text3);flex-shrink:0;white-space:nowrap}
+.item-owner-badge{font-family:var(--mono);font-size:9px;color:var(--purple);background:var(--purple-dim);border:1px solid rgba(167,139,250,.2);padding:1px 6px;border-radius:3px;flex-shrink:0;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item-expand-btn{background:none;border:1px solid var(--border);color:var(--text3);border-radius:4px;padding:2px 7px;font-family:var(--mono);font-size:9px;cursor:pointer;transition:all .15s;flex-shrink:0;white-space:nowrap}
+.item-expand-btn:hover{background:var(--surface2);color:var(--text2)}
+.item-del-btn{background:none;border:none;color:var(--text3);font-size:11px;cursor:pointer;padding:3px;border-radius:3px;transition:all .15s;flex-shrink:0;display:none}
+.item-del-btn:hover{color:var(--red)}
+.item-del-btn.visible{display:block}
+
+/* ITEM NOTE — inline visible always */
+.item-note-row{padding:0 .875rem .5rem 2.625rem;display:flex;align-items:flex-start;gap:8px}
+.item-note-icon{font-size:10px;color:var(--text3);margin-top:.3rem;flex-shrink:0}
+.item-note-inline{flex:1;background:transparent;border:none;border-bottom:1px solid transparent;font-family:var(--body);font-size:11.5px;color:var(--text2);outline:none;resize:none;min-height:20px;line-height:1.5;transition:all .15s;padding:.15rem 0}
+.item-note-inline:focus{border-bottom-color:var(--purple);background:transparent}
+.item-note-inline::placeholder{color:var(--text3);font-style:italic;font-size:11px}
+.item-note-inline:not(:focus):not(:placeholder-shown){color:var(--text2)}
+.item-note-saved{font-family:var(--mono);font-size:9px;color:var(--green);opacity:0;transition:opacity .3s;flex-shrink:0;margin-top:.35rem}
+
+/* ITEM EXPANDED BODY */
+.item-body{border-top:1px solid var(--border);display:none;background:var(--surface)}
+.item-body.open{display:block}
+
+/* STATUS TOGGLE in body */
+.item-body-status{display:flex;align-items:center;gap:8px;padding:.75rem .875rem;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.item-body-status-label{font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;flex:1}
+.status-pills{display:flex;gap:4px}
+.spill-btn{padding:.3rem .7rem;border-radius:4px;border:1px solid var(--border);font-family:var(--mono);font-size:10px;cursor:pointer;background:transparent;color:var(--text3);transition:all .15s}
+.spill-btn:hover{border-color:var(--border2);color:var(--text2)}
+.spill-btn.active-todo{background:rgba(75,96,128,.2);border-color:rgba(75,96,128,.4);color:var(--text2)}
+.spill-btn.active-inplace{background:var(--amber-dim);border-color:rgba(251,191,36,.4);color:var(--amber)}
+.spill-btn.active-verified{background:var(--green-dim);border-color:rgba(52,211,153,.4);color:var(--green)}
+.verified-stamp{font-family:var(--mono);font-size:9px;color:var(--green);background:var(--green-dim);border:1px solid rgba(52,211,153,.25);padding:2px 7px;border-radius:4px}
+
+/* META ROW in body */
+.item-body-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:.75rem .875rem;border-bottom:1px solid var(--border)}
+.meta-field{display:flex;flex-direction:column;gap:.3rem}
+.meta-label{font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.meta-input{background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:.35rem .6rem;font-family:var(--body);font-size:12px;color:var(--text);outline:none;transition:border-color .15s}
+.meta-input:focus{border-color:var(--blue)}
+.meta-input::placeholder{color:var(--text3)}
+.risk-pills{display:flex;gap:4px;flex-wrap:wrap}
+.risk-pill{padding:2px 8px;border-radius:4px;border:1px solid;font-family:var(--mono);font-size:9px;cursor:pointer;transition:all .15s;font-weight:600}
+
+/* WHY CARD in body */
+.item-body-why{padding:.75rem .875rem;border-bottom:1px solid var(--border);display:flex;gap:10px;background:rgba(79,142,247,0.04)}
+.why-icon{font-size:13px;flex-shrink:0;margin-top:1px}
+.why-label-sm{font-family:var(--mono);font-size:9px;color:var(--blue);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.25rem;font-weight:600}
+.why-text-display{font-size:12.5px;color:var(--text2);line-height:1.7}
+.why-text-edit{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:.4rem .6rem;font-family:var(--body);font-size:12.5px;color:var(--text);outline:none;resize:vertical;min-height:52px;line-height:1.7;display:none}
+.why-text-edit:focus{border-color:var(--blue)}
+
+/* EVIDENCE in body */
+.item-body-evidence{padding:.75rem .875rem;border-bottom:1px solid var(--border)}
+.evidence-label{font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem;display:flex;align-items:center;gap:6px}
+.evidence-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:.4rem .65rem;font-family:var(--body);font-size:12px;color:var(--text);outline:none;resize:vertical;min-height:44px;line-height:1.6}
+.evidence-input:focus{border-color:var(--green)}
+.evidence-input::placeholder{color:var(--text3)}
+
+/* STEPS in body */
+.item-body-steps{padding:.75rem .875rem}
+.steps-header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
+.steps-lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.add-step-btn{background:none;border:1px dashed rgba(167,139,250,.4);border-radius:4px;color:var(--purple);font-family:var(--mono);font-size:10px;padding:.25rem .65rem;cursor:pointer;transition:all .15s;opacity:.6;display:none}
+.add-step-btn:hover{opacity:1;background:var(--purple-dim)}
+.add-step-btn.visible{display:block}
+.step{display:flex;gap:12px;position:relative}
+.step:not(:last-child)::before{content:'';position:absolute;left:13px;top:28px;bottom:0;width:1px;background:var(--border2)}
+.step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:600;flex-shrink:0;background:var(--surface2);color:var(--text3);border:1px solid var(--border2);z-index:1;margin-top:1px}
+.step-body{flex:1;padding-bottom:1.1rem}
+.step-h{font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:.25rem;font-family:var(--display)}
+.step-h-input{font-size:12.5px;font-weight:600;font-family:var(--display);width:100%;background:var(--surface2);border:1px solid rgba(167,139,250,.3);border-radius:4px;color:var(--text);padding:.15rem .4rem;outline:none;margin-bottom:.25rem;display:none}
+.step-b{font-size:12px;color:var(--text2);line-height:1.65}
+.step-b code{font-family:var(--mono);font-size:10.5px;background:var(--bg);color:#93C5FD;padding:1px 5px;border-radius:3px}
+.step-b-input{font-size:12px;color:var(--text);line-height:1.65;width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:.3rem .45rem;outline:none;resize:vertical;font-family:var(--body);display:none;min-height:50px}
+.step-del-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:10px;padding:2px 4px;border-radius:3px;transition:all .15s;flex-shrink:0;display:none;margin-top:3px}
+.step-del-btn:hover{color:var(--red)}.step-del-btn.vis{display:block}
+.callout{margin-top:.5rem;padding:.5rem .75rem;border-radius:0 5px 5px 0;font-size:11.5px;line-height:1.65;display:flex;gap:7px}
+.ct{background:rgba(79,142,247,.07);border-left:2px solid var(--blue);color:var(--text2)}
+.cw{background:rgba(251,191,36,.07);border-left:2px solid var(--amber);color:#FDE68A}
+.c-icon{flex-shrink:0;font-size:11px;margin-top:2px}
+
+/* EDIT ITEM MOVE CONTROLS */
+.item-move-row{padding:.5rem .875rem;border-top:1px solid var(--border);background:rgba(167,139,250,0.04);display:none;align-items:center;gap:6px;flex-wrap:wrap}
+.item-move-row.vis{display:flex}
+.move-lbl{font-family:var(--mono);font-size:9px;color:var(--purple)}
+.move-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:10px;padding:3px 6px;outline:none;cursor:pointer}
+.move-btn-sm{background:none;border:1px solid var(--border);border-radius:4px;color:var(--text3);font-family:var(--mono);font-size:9px;padding:2px 7px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.move-btn-sm:hover{background:var(--surface2);color:var(--text2)}
+.dup-btn{border-color:rgba(167,139,250,.3);color:var(--purple)}
+.dup-btn:hover{background:var(--purple-dim)}
+
+/* ADD ITEM BTN */
+.add-item-row{padding:.5rem .75rem;display:none}
+.add-item-row.vis{display:block}
+.add-item-btn-inline{width:100%;background:none;border:1px dashed rgba(167,139,250,.3);border-radius:8px;color:var(--purple);font-family:var(--mono);font-size:10px;padding:.5rem;cursor:pointer;transition:all .15s;opacity:.5}
+.add-item-btn-inline:hover{opacity:1;background:var(--purple-dim)}
+
+/* ===== EMPTY STATE ===== */
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text3);font-family:var(--mono);font-size:12px}
+.empty-icon{font-size:32px;margin-bottom:.75rem;opacity:.4}
+
+/* ===== MODALS ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(5,8,15,.9);backdrop-filter:blur(8px);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:100%;padding:1.5rem}
+.modal.sm{max-width:420px}.modal.md{max-width:540px}
+.modal-title{font-family:var(--display);font-size:16px;font-weight:700;margin-bottom:.2rem}
+.modal-sub{font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:1.1rem}
+.modal-label{font-size:12px;color:var(--text2);margin-bottom:.35rem}
+.modal-input{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:.6rem .875rem;font-family:var(--body);font-size:13px;color:var(--text);outline:none;margin-bottom:.875rem}
+.modal-input:focus{border-color:var(--blue)}
+.modal-textarea{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:.6rem .875rem;font-family:var(--body);font-size:12.5px;color:var(--text);outline:none;resize:vertical;min-height:70px;line-height:1.6;margin-bottom:.875rem}
+.modal-textarea::placeholder{color:var(--text3)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.modal-cancel{background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:.5rem 1rem;font-family:var(--display);font-size:12px;cursor:pointer;transition:all .15s}
+.modal-cancel:hover{background:var(--surface2);color:var(--text)}
+.modal-ok{background:var(--blue);border:none;color:white;border-radius:6px;padding:.5rem 1.1rem;font-family:var(--display);font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.modal-ok:hover{opacity:.85}
+.modal-ok.green{background:var(--green);color:#0B1910}
+.modal-ok.red{background:var(--red)}
+.danger-input{width:100%;background:var(--surface);border:1px solid var(--red);border-radius:6px;padding:.6rem .875rem;font-family:var(--mono);font-size:12px;color:var(--text);outline:none;margin-bottom:.875rem}
+.danger-input::placeholder{color:var(--text3)}
+
+/* ===== SETTINGS ===== */
+.settings-overlay{position:fixed;inset:0;background:rgba(5,8,15,.9);backdrop-filter:blur(8px);z-index:400;display:none;align-items:flex-start;justify-content:flex-end}
+.settings-overlay.open{display:flex}
+.settings-panel{background:var(--bg2);border-left:1px solid var(--border2);height:100vh;width:380px;padding:1.5rem;overflow-y:auto}
+.settings-h{font-family:var(--display);font-size:18px;font-weight:700;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between}
+.settings-close{background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;transition:color .15s}
+.settings-close:hover{color:var(--text)}
+.settings-section{margin-bottom:1.5rem}
+.settings-section-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:.75rem;padding-bottom:.4rem;border-bottom:1px solid var(--border)}
+.settings-row{display:flex;align-items:flex-start;gap:10px;padding:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:7px}
+.settings-row-info{flex:1}
+.settings-row-title{font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:.15rem}
+.settings-row-desc{font-size:11px;color:var(--text2);line-height:1.55}
+.s-btn{background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:5px;padding:.4rem .875rem;font-family:var(--display);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;margin-top:1px}
+.s-btn:hover{background:var(--surface3,#2A3855);color:var(--text)}
+.s-btn.danger{background:var(--red-dim);border-color:rgba(248,113,113,.3);color:var(--red)}
+.s-btn.danger:hover{background:rgba(248,113,113,.2)}
+
+/* ===== QUICK SEARCH ===== */
+.qs-overlay{position:fixed;inset:0;background:rgba(5,8,15,.85);backdrop-filter:blur(8px);z-index:600;display:none;align-items:flex-start;justify-content:center;padding-top:14vh}
+.qs-overlay.open{display:flex}
+.qs-box{background:var(--bg2);border:1px solid var(--border2);border-radius:11px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.qs-row{display:flex;align-items:center;gap:8px;padding:.875rem 1.1rem;border-bottom:1px solid var(--border)}
+.qs-icon{font-size:13px;color:var(--text3)}
+.qs-input{background:none;border:none;outline:none;font-family:var(--mono);font-size:13px;color:var(--text);flex:1}
+.qs-input::placeholder{color:var(--text3)}
+.qs-esc{font-family:var(--mono);font-size:9px;color:var(--text3);background:var(--surface2);border:1px solid var(--border2);border-radius:3px;padding:1px 5px}
+.qs-results{max-height:340px;overflow-y:auto}
+.qs-result{display:flex;align-items:center;gap:10px;padding:.6rem 1.1rem;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--border)}
+.qs-result:last-child{border-bottom:none}
+.qs-result:hover,.qs-result.focused{background:var(--surface)}
+.qs-r-phase{font-family:var(--mono);font-size:9px;color:var(--text3);min-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qs-r-title{font-size:12px;color:var(--text2);flex:1}
+.qs-r-status{width:7px;height:7px;border-radius:50%;flex-shrink:0;border:1px solid}
+.qs-empty{padding:1.75rem;text-align:center;font-family:var(--mono);font-size:11px;color:var(--text3)}
+
+/* ===== SCROLLSPY ===== */
+.toc-btn{position:fixed;bottom:1.5rem;right:1.5rem;z-index:50;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:.5rem .875rem;font-family:var(--mono);font-size:10px;color:var(--text2);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.toc-btn:hover{background:var(--surface2);color:var(--text)}
+
+/* ===== PRINT ===== */
+@media print{
+  .topbar,.tabbar,.toc-btn,.item-expand-btn,.item-del-btn,.ph-action-btn,.ph-collapse-btn,.add-item-row,.item-move-row,.modal-overlay,.settings-overlay,.qs-overlay{display:none!important}
+  body::before{display:none}
+  .item-body{display:block!important}
+  .phase-block{border:1px solid #ccc;page-break-inside:avoid}
+  .item-row{page-break-inside:avoid;border:1px solid #ddd}
+}
+</style>
+</head>
+<body>
+
+<!-- MODALS -->
+
+<!-- LOG MODAL for Ops tasks -->
+<div class="modal-overlay" id="log-modal">
+  <div class="modal sm">
+    <div class="modal-title">Log completion</div>
+    <div class="modal-sub" id="log-modal-sub"></div>
+    <div class="modal-label">Notes — findings, escalations, observations (optional)</div>
+    <textarea class="modal-textarea" id="log-note" placeholder="e.g. Found 2 open S1 alerts, no new critical CVEs this month."></textarea>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="cm('log-modal')">Cancel</button>
+      <button class="modal-ok green" onclick="confirmLog()">✓ Log completed</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="del-modal">
+  <div class="modal sm">
+    <div class="modal-title" id="del-title">Delete?</div>
+    <div class="modal-sub" id="del-sub"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="cm('del-modal')">Cancel</button>
+      <button class="modal-ok red" onclick="confirmDel()">Delete permanently</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="add-item-modal">
+  <div class="modal md">
+    <div class="modal-title">Add checklist item</div>
+    <div class="modal-sub" id="add-item-sub"></div>
+    <div class="modal-label">Title *</div>
+    <input class="modal-input" id="ai-title" placeholder="e.g. Enable audit logging for privileged actions">
+    <div class="modal-label">Why this matters</div>
+    <textarea class="modal-textarea" id="ai-why" placeholder="Security purpose of this control..." style="min-height:52px"></textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div><div class="modal-label">Est. time</div><input class="modal-input" id="ai-est" placeholder="30 min"></div>
+      <div><div class="modal-label">Risk</div><select class="modal-input" id="ai-risk"><option value="critical">Critical</option><option value="high" selected>High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
+      <div><div class="modal-label">Owner</div><input class="modal-input" id="ai-owner" placeholder="Name"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="cm('add-item-modal')">Cancel</button>
+      <button class="modal-ok" onclick="confirmAddItem()">Add item</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="add-phase-modal">
+  <div class="modal sm">
+    <div class="modal-title">Add new phase</div>
+    <div class="modal-label">Phase name</div>
+    <input class="modal-input" id="ap-name" placeholder="e.g. Email Security">
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="cm('add-phase-modal')">Cancel</button>
+      <button class="modal-ok" onclick="confirmAddPhase()">Add phase</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="reset-modal">
+  <div class="modal sm">
+    <div class="modal-title" id="reset-title">Are you sure?</div>
+    <div class="modal-sub" id="reset-desc" style="margin-bottom:1rem"></div>
+    <div class="modal-label">Type CONFIRM to proceed</div>
+    <input class="danger-input" id="reset-input" placeholder="CONFIRM" autocomplete="off">
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="cm('reset-modal')">Cancel</button>
+      <button class="modal-ok red" onclick="doReset()">Proceed</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="settings-overlay" id="settings-overlay" onclick="if(event.target===this)cm('settings-overlay')">
+  <div class="settings-panel">
+    <div class="settings-h">Settings <button class="settings-close" onclick="cm('settings-overlay')">✕</button></div>
+    <div class="settings-section">
+      <div class="settings-section-title">Backup & restore</div>
+      <div class="settings-row"><div class="settings-row-info"><div class="settings-row-title">Export JSON</div><div class="settings-row-desc">Download all phases, items, steps, statuses, notes, and evidence as a JSON backup.</div></div><button class="s-btn" onclick="exportConfig()">↑ Export</button></div>
+      <div class="settings-row"><div class="settings-row-info"><div class="settings-row-title">Import JSON</div><div class="settings-row-desc">Load a previously exported config. Replaces current data.</div></div><label class="s-btn" style="cursor:pointer">↓ Import<input type="file" accept=".json" style="display:none" onchange="importConfig(event)"></label></div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Print & export</div>
+      <div class="settings-row"><div class="settings-row-info"><div class="settings-row-title">Print / Save as PDF</div><div class="settings-row-desc">Clean print layout — all items expanded, controls hidden.</div></div><button class="s-btn" onclick="window.print()">🖨 Print</button></div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title" style="color:var(--red)">Danger zone</div>
+      <div class="settings-row" style="border-color:rgba(248,113,113,.2)"><div class="settings-row-info"><div class="settings-row-title">Reset to defaults</div><div class="settings-row-desc">Restore all items to original content. Statuses, notes, and evidence are erased.</div></div><button class="s-btn danger" onclick="resetPrompt('soft')">Reset</button></div>
+      <div class="settings-row" style="border-color:rgba(248,113,113,.2)"><div class="settings-row-info"><div class="settings-row-title">Wipe everything</div><div class="settings-row-desc">Full factory reset. All data permanently deleted.</div></div><button class="s-btn danger" onclick="resetPrompt('hard')">Wipe</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK SEARCH -->
+<div class="qs-overlay" id="qs-overlay">
+  <div class="qs-box">
+    <div class="qs-row">
+      <div class="qs-icon">🔍</div>
+      <input class="qs-input" id="qs-input" placeholder="Search items, steps, notes..." autocomplete="off">
+      <span class="qs-esc">ESC</span>
+    </div>
+    <div class="qs-results" id="qs-results"></div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-icon">🛡</div>
+      <div class="brand-name">Security Runbook</div>
+    </div>
+    <div class="topbar-divider"></div>
+    <div class="topbar-stats">
+      <div class="tstat"><span class="tstat-n green" id="ts-ver">0</span> verified</div>
+      <div class="tstat"><span class="tstat-n amber" id="ts-inp">0</span> in place</div>
+      <div class="tstat"><span class="tstat-n blue" id="ts-todo">0</span> to do</div>
+      <div class="tstat"><span class="tstat-n red" id="ts-crit">0</span> critical open</div>
+      <div class="tstat"><span class="tstat-n" id="ts-notreq" style="color:#9CA3AF">0</span> not required</div>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+    </div>
+    <div class="topbar-actions">
+      <button class="tb-btn" id="edit-btn" onclick="toggleEdit()">✏ Edit</button>
+      <button class="tb-btn" onclick="om('settings-overlay')">⚙</button>
+      <button class="tb-btn primary" onclick="om('add-phase-modal')">+ Phase</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tabbar">
+  <div class="tabbar-inner">
+    <button class="tab active" id="tab-all" onclick="setTab('all')">All <span class="tab-count" id="tc-all">0</span></button>
+    <button class="tab" id="tab-todo" onclick="setTab('todo')">To do <span class="tab-count" id="tc-todo">0</span></button>
+    <button class="tab" id="tab-inplace" onclick="setTab('inplace')">In place <span class="tab-count" id="tc-inplace">0</span></button>
+    <button class="tab" id="tab-verified" onclick="setTab('verified')">Verified <span class="tab-count" id="tc-verified">0</span></button>
+    <button class="tab notreq-tab" id="tab-notreq" onclick="setTab('notreq')">Not Required <span class="tab-count" id="tc-notreq">0</span></button>
+    <div class="tabbar-right">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="search-input" placeholder="Search... (or /)" oninput="applyFilters()">
+      </div>
+      <select class="filter-risk" id="risk-filter" onchange="applyFilters()">
+        <option value="all">All risks</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN PAGE -->
+<div class="page" id="page"></div>
+
+<!-- TOC SCROLL BUTTON -->
+<button class="toc-btn" onclick="scrollTop()" id="toc-btn" style="display:none">↑ Top</button>
+
+<script>
+// ==================== COMPLETE DATA — ALL 45 ITEMS ====================
+// 4 Scope + 5 Identity + 7 Hardening + 5 Threat + 5 Vulnerability + 5 Compliance = 31 Setup
+// + 4 Process (event-driven) + 10 Ops (recurring) = 45 total
+
+const DEFAULT_SETUP = [
+  // ─────────────────────────────────────────────
+  // PHASE 1 — SCOPE & INVENTORY (S1–S4)
+  // ─────────────────────────────────────────────
+  {
+    id:"ph-scope", name:"Scope & Inventory", icon:"🔍", color:"#3B82F6", note:"",
+    items:[
+      {
+        id:"S1", title:"Confirm Intune enrollment status for all devices",
+        why:"Unmanaged devices are blind spots. You cannot secure what you cannot see.",
+        est:"20 min", tools:["Intune"], risk:"high", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Sign in to Intune admin center", b:"Go to intune.microsoft.com and sign in with Global Admin or Intune Administrator account."},
+          {h:"Navigate to Devices > All devices", b:"In the left nav, click Devices then All devices. Every enrolled device appears with OS, compliance state, and last check-in."},
+          {h:"Filter by OS and compliance state", b:"Use the Filter option: OS (Windows/macOS/iOS/Android) and Compliance (Compliant / Non-compliant / Not evaluated / In grace period)."},
+          {h:"Export the device list", b:"Click Export to download a CSV. Date-stamp it — this is your enrollment baseline for the assessment."},
+          {h:"Cross-check against your asset register", b:"Compare the Intune export to your CMDB or HR-issued device list. Any device in the asset register but missing from Intune = coverage gap."},
+          {h:"Flag stale devices", b:"Sort by Last sync date. Devices not synced in 30+ days show stale compliance data. Note them separately."}
+        ],
+        tip:"Devices showing Not evaluated have never checked in against a compliance policy — they are invisible to Conditional Access enforcement.", warn:null
+      },
+      {
+        id:"S2", title:"List all endpoint types in scope",
+        why:"Scope creep and scope gaps are equally dangerous. You need a clear boundary before assessing controls.",
+        est:"30 min", tools:[], risk:"medium", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Define your endpoint categories", b:"Work through each type: corporate Windows laptops and desktops (Intune-managed), Horizon VDI sessions (persistent and non-persistent), corporate mobile devices (iOS/Android via Intune MDM or MAM-only), shared/kiosk devices."},
+          {h:"Confirm Horizon VDI scope", b:"Log into Horizon Administrator console. Go to Catalog > Desktop Pools. List active pools, note whether persistent or non-persistent, confirm Qualys Cloud Agent is in the gold image."},
+          {h:"Identify mobile device policy", b:"In Intune, go to Devices > By platform > iOS and Android. Confirm whether personal devices are BYOD (MAM-only) or fully enrolled MDM. These have very different security postures."},
+          {h:"Write a one-page scope statement", b:"Document: what is in scope, what is explicitly out of scope, and why. This anchors every subsequent finding."}
+        ],
+        tip:null, warn:"IoT devices, printers, and OT endpoints should be explicitly listed as out of scope — not ignored. They are a lateral movement risk even if you cannot manage them via Intune."
+      },
+      {
+        id:"S3", title:"Identify unmanaged or non-compliant devices",
+        why:"Non-compliant devices with access to corporate resources are your most immediate risk.",
+        est:"45 min", tools:["Intune"], risk:"critical", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Filter for non-compliant devices", b:"Go to Devices > Monitor > Noncompliant devices. This is a pre-filtered view. Export it as CSV."},
+          {h:"Find devices never enrolled", b:"Subtract your full Intune device list from your HR/asset register. The difference = devices that exist in your environment but have never been enrolled."},
+          {h:"Check Entra ID for unmanaged registered devices", b:"In Entra ID > Devices > All devices, filter by MDM: None. These are Entra-registered but not Intune-managed — common with personal BYOD."},
+          {h:"Categorize each unmanaged device", b:"For each gap device: Corporate asset (force enroll, 30-day deadline), Contractor device (apply MAM without enrollment), Unknown device (escalate for investigation and potential network block)."},
+          {h:"Assign owners and due dates", b:"Every unmanaged corporate device needs a named owner and a remediation deadline."}
+        ],
+        tip:"Non-compliant devices are automatically blocked from M365 apps once you wire compliance policy to Conditional Access. Validate enforcement is working on a test device.", warn:null
+      },
+      {
+        id:"S4", title:"Document out-of-scope endpoints",
+        why:"Out of scope does not mean zero risk. IoT and unmanaged devices on the same network are lateral movement paths.",
+        est:"20 min", tools:[], risk:"low", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Enumerate all networked devices outside Intune", b:"List: network printers, IP phones, smart TVs, IoT sensors, OT/SCADA equipment, visitor Wi-Fi devices. Gather: device name, IP, MAC, location, owner."},
+          {h:"Verify network segmentation", b:"Confirm these devices are on a separate VLAN from corporate endpoints. They should not have direct routed access to domain controllers, file servers, or internal APIs."},
+          {h:"Check for default credentials", b:"For any manageable out-of-scope device (printers, managed switches, IP phones), confirm default admin passwords have been changed."},
+          {h:"Log them in your asset register", b:"Even out-of-scope devices must be tracked. Add to CMDB with: device type, IP, MAC, VLAN, owner, and last reviewed date."}
+        ],
+        tip:null, warn:"Printers on the same subnet as user workstations with default credentials are a well-documented attack path. Do not dismiss them just because they are out of scope."
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // PHASE 2 — IDENTITY & ACCESS (I1–I5)
+  // ─────────────────────────────────────────────
+  {
+    id:"ph-identity", name:"Identity & Access", icon:"🔐", color:"#8B5CF6", note:"",
+    items:[
+      {
+        id:"I1", title:"Enforce MFA via Conditional Access",
+        why:"MFA blocks over 99% of account compromise attacks. The single highest-ROI control you can implement.",
+        est:"60 min", tools:["Entra"], risk:"critical", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Open Entra ID Conditional Access", b:"Go to entra.microsoft.com > Protection > Conditional Access > Policies."},
+          {h:"Create a new CA policy", b:"Click New policy. Name it: Require-MFA-AllUsers-AllApps."},
+          {h:"Set user and resource assignments", b:"Users: All users. Target resources: All cloud apps. Conditions: leave open to cover all platforms and locations."},
+          {h:"Set the grant control", b:"Under Grant, select Require multifactor authentication."},
+          {h:"Exclude break-glass accounts", b:"Under Exclude > Users, add both break-glass accounts. Never apply MFA CA to these accounts."},
+          {h:"Enable in report-only mode first", b:"Set to Report-only. Monitor for 5-7 days in CA > Insights and Reporting. Look for unexpected blocks."},
+          {h:"Block legacy authentication separately", b:"Create a second CA policy: Conditions > Client apps > Legacy authentication clients > Block."},
+          {h:"Switch to Enabled", b:"Flip to On. Communicate to users 48 hours before go-live. Have helpdesk ready."}
+        ],
+        tip:"Check sign-in logs for accounts still authenticating via SMTP AUTH, IMAP, or POP3 before enabling — these will break silently.", warn:null
+      },
+      {
+        id:"I2", title:"Configure Duo passwordless / phishing-resistant MFA",
+        why:"Standard push MFA is bypassable via real-time phishing. Phishing-resistant MFA is not.",
+        est:"90 min", tools:["Duo","Entra"], risk:"critical", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Determine your Duo integration method", b:"Option A: Duo via SAML/OIDC federated to Entra. Option B: Duo as External Authentication Method in Entra (preferred)."},
+          {h:"Enable FIDO2 security keys in Entra", b:"Entra ID > Protection > Authentication methods > FIDO2 security key. Enable and target your pilot group."},
+          {h:"Configure Duo Verified Push", b:"In Duo Admin Panel, navigate to your Entra app. Enable Verified Push — requires user to type a code shown on the login screen into the Duo app."},
+          {h:"Set authentication strengths in CA", b:"In Entra CA > Grant, use Require authentication strength. Select Phishing-resistant MFA for high-value targets: Azure portal, Intune admin, Entra console."},
+          {h:"Pilot with a test group", b:"Apply to a pilot group of 10-15 users. Validate auth flow on browser, thick clients, and mobile."},
+          {h:"Expand and monitor", b:"Roll out broadly. Monitor Entra sign-in logs — confirm auth method shows FIDO2 or Passkey, not just federation."}
+        ],
+        tip:null, warn:"If Duo is integrated via legacy SAML, the phishing-resistant signal may not pass through to Entra. Verify in sign-in log that auth method shows FIDO2 or Passkey."
+      },
+      {
+        id:"I3", title:"Enable Windows LAPS",
+        why:"Shared or known local admin passwords allow lateral movement across every device that shares them. LAPS gives every device a unique rotated password.",
+        est:"45 min", tools:["Intune","Entra"], risk:"high", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Confirm prerequisites", b:"Windows LAPS requires: Windows 11 22H2+ or Windows 10 22H2+ with April 2023 update. Devices must be Entra-joined or Hybrid Entra-joined and Intune-enrolled."},
+          {h:"Enable LAPS in Entra ID", b:"Entra ID > Devices > Device settings. Set Enable Microsoft Entra Local Administrator Password Solution (LAPS) to Yes."},
+          {h:"Create LAPS policy in Intune", b:"Endpoint Security > Account Protection > Create Policy > Windows > Local admin password solution (Windows LAPS)."},
+          {h:"Configure settings", b:"Backup directory: Azure Active Directory. Password age: 30 days. Password length: 20+ characters. Complexity: large + small + numbers + special. Post-auth action: Reset password and log out."},
+          {h:"Assign to all Windows devices", b:"Assign to All Windows Devices group. Devices begin rotating on next check-in."},
+          {h:"Restrict password retrieval via RBAC", b:"Restrict retrieval to Helpdesk Administrators or a custom scoped role only."},
+          {h:"Verify escrow is working", b:"Pick a test device. Entra ID > Devices > find device > Local administrator password. Should show a stored password with expiry date."}
+        ],
+        tip:"Audit LAPS retrieval events via Entra audit logs: filter for Activity = Recover device local administrator password.", warn:null
+      },
+      {
+        id:"I4", title:"Restrict local admin rights via EPM",
+        why:"Local admin rights on standard user accounts are the number one enabler of malware persistence and lateral movement.",
+        est:"60 min", tools:["Intune"], risk:"high", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Audit current local admin membership", b:"Use an Intune Remediation script to check local Administrators group. PowerShell: Get-LocalGroupMember -Group Administrators. Export and review."},
+          {h:"Create a Settings Catalog policy", b:"Devices > Configuration > Create > Settings Catalog. Search for Local Users and Groups. Add Local User Group setting."},
+          {h:"Configure the Administrators group", b:"Group: Administrators (built-in). Action: Restrict group (replace membership). Members: local Administrator account managed by LAPS only."},
+          {h:"Configure EPM for elevation on demand", b:"Intune > Endpoint Security > Endpoint Privilege Management. Create elevation rules for specific approved applications only."},
+          {h:"Pilot on a test group first", b:"Assign to 5-10 test devices. Log in as standard user and confirm restrictions apply."},
+          {h:"Communicate before broad rollout", b:"Give 1 week notice with EPM escalation process documented."}
+        ],
+        tip:null, warn:"Removing local admin from users who previously had it will break self-installed software. Audit installed apps first and migrate to Intune deployment before removing rights."
+      },
+      {
+        id:"I5", title:"Verify break-glass accounts",
+        why:"If every admin account is behind MFA and something goes wrong with Entra, break-glass accounts are your way back in.",
+        est:"30 min", tools:["Entra"], risk:"critical", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Confirm break-glass account setup", b:"Need at least 2 accounts: cloud-only (not synced), Global Administrator assigned, not tied to any individual person, long complex password stored offline in a physical safe."},
+          {h:"Verify exclusion from every CA policy", b:"Go through every enabled CA policy. Under Exclude > Users, confirm both accounts are listed in all of them."},
+          {h:"Confirm no MFA methods registered", b:"Entra ID > Users > find each account > Authentication methods. Zero MFA methods should be registered."},
+          {h:"Set up sign-in alerting", b:"Configure a Sentinel alert or Entra diagnostic rule that fires any time a break-glass account signs in."},
+          {h:"Test access quarterly", b:"Sign in with a break-glass account quarterly to confirm it still works. Document the test date and result."}
+        ],
+        tip:"Any break-glass sign-in that was not a scheduled test should trigger immediate investigation.", warn:null
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // PHASE 3 — ENDPOINT HARDENING (H1–H7)
+  // ─────────────────────────────────────────────
+  {
+    id:"ph-hardening", name:"Endpoint Hardening", icon:"🛡️", color:"#14B8A6", note:"",
+    items:[
+      {
+        id:"H1", title:"Deploy BitLocker with XTS-AES 256 + TPM 2.0",
+        why:"An unencrypted lost laptop hands an attacker every file on the device. BitLocker makes that data unreadable without the TPM.",
+        est:"45 min", tools:["Intune"], risk:"critical", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Confirm TPM 2.0 on target devices", b:"Intune > Devices > select device > Hardware. Check TPM version. Or run on device: Get-Tpm — TpmPresent and TpmReady should both return True."},
+          {h:"Create a Disk Encryption policy", b:"Endpoint Security > Disk Encryption > Create Policy > Windows > BitLocker."},
+          {h:"Configure key settings", b:"BitLocker enabled for OS, fixed, and removable drives. Encryption: XTS-AES 256-bit for OS and fixed. Startup auth: Require TPM. Recovery key: Save to Azure AD. Block non-TPM BitLocker: Yes."},
+          {h:"Assign to all Windows devices", b:"Assign to All Windows Devices group. Encryption begins on next check-in."},
+          {h:"Monitor encryption status", b:"Endpoint Security > Disk Encryption > Encryption report. Review per-device status and key escrow status."},
+          {h:"Verify key escrow", b:"Pick 3-5 test devices. Entra ID > Devices > find device > BitLocker keys. Each should show a recovery key with rotation date."}
+        ],
+        tip:"Devices encrypted before Intune enrollment may not automatically escrow their key. Use an Intune Remediation script to detect and force key backup.", warn:null
+      },
+      {
+        id:"H2", title:"Deploy Windows 11 Security Baseline (MDM)",
+        why:"300+ security settings pre-configured to CIS and NIST recommendations. The fastest way to apply hardened defaults across your fleet.",
+        est:"60 min", tools:["Intune"], risk:"high", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Understand what the baseline covers", b:"Account lockout policies, audit logging, Defender settings, firewall defaults, browser hardening, Credential Guard. Review the full list in Microsoft docs before deploying."},
+          {h:"Create a baseline profile", b:"Endpoint Security > Security Baselines > Windows 11 Security Baseline > Create profile. Name with version and date: WIN11-Baseline-2024-Nov."},
+          {h:"Review settings before deploying", b:"Flag potential conflicts: BitLocker settings (if separate BitLocker policy exists), SMB signing (can break legacy file shares), Windows Firewall (may affect VPN split-tunnel)."},
+          {h:"Pilot deploy to Ring 0", b:"Assign to pilot group of 5-10 IT devices. Monitor in Endpoint Security > Security Baselines > your profile > Device status for 1-2 weeks."},
+          {h:"Resolve conflicts", b:"Intune flags conflicts where two policies set the same value. Decide which policy owns that setting and remove it from the other."},
+          {h:"Broad deployment", b:"Assign to all Windows devices. Document the baseline version, date, and any customisations."}
+        ],
+        tip:null, warn:"Never deploy a Security Baseline to all production devices on day one. SMB signing failures and VPN disconnections are common first-time surprises."
+      },
+      {
+        id:"H3", title:"Apply Windows Firewall baseline",
+        why:"Endpoint firewalls block inbound lateral movement. A misconfigured firewall leaves the device open to network-based attacks.",
+        est:"30 min", tools:["Intune"], risk:"high", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Create a Firewall policy", b:"Endpoint Security > Firewall > Create Policy > Windows > Windows Firewall."},
+          {h:"Set core rules for all profiles", b:"Domain, Private, and Public profiles: Firewall enabled = Yes. Inbound connections = Block. Outbound connections = Allow."},
+          {h:"Add required inbound exceptions", b:"Rules for: remote management tools, monitoring agents (SentinelOne, Qualys Cloud Agent), any corporate app requiring inbound connections."},
+          {h:"Validate VPN behavior", b:"After piloting, test VPN connects and routes correctly. Split-tunnel VPNs sometimes need specific allow rules."},
+          {h:"Assign and monitor", b:"Assign to all Windows devices. Monitor via Endpoint Security > Firewall > MDM devices with firewall off report."}
+        ],
+        tip:"If Security Baseline is already deployed it includes basic firewall settings. Pick one source of truth — do not create conflicting policies.", warn:null
+      },
+      {
+        id:"H4", title:"Configure auto-lock: 5 min inactivity timeout",
+        why:"An unlocked unattended laptop is a walk-up attack. Five minutes is the industry-standard balance between security and user annoyance.",
+        est:"20 min", tools:["Intune"], risk:"medium", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Create a Settings Catalog profile", b:"Devices > Configuration > Create > Settings Catalog. Platform: Windows 10 and later. Name: WIN-Inactivity-Lock-5min."},
+          {h:"Add the inactivity setting", b:"Search: Interactive logon machine inactivity limit. Add it."},
+          {h:"Set value to 300 seconds", b:"Set to 300. Locks screen after 5 minutes of no keyboard or mouse input regardless of user's personal setting."},
+          {h:"Assign to all Windows devices", b:"Assign to Windows device group. Machine-level setting — applies to all users on that device."},
+          {h:"Verify on a test device", b:"After sync, leave idle for 5 minutes. Screen should lock automatically."}
+        ],
+        tip:"Whichever is shorter — machine inactivity limit or user's personal screen lock — wins. Users can set shorter but not longer.", warn:null
+      },
+      {
+        id:"H5", title:"Enable Dynamic Lock (presence-based auto-lock)",
+        why:"Users forget to lock screens. Dynamic Lock locks automatically when they walk away using their phone Bluetooth as a presence indicator.",
+        est:"30 min", tools:["Intune"], risk:"medium", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Confirm hardware compatibility", b:"Dynamic Lock works via Bluetooth (phone paired to laptop) or Windows Hello IR camera. Check device models — Dell Latitude, HP EliteBook, Lenovo ThinkPad modern lines support both."},
+          {h:"Enable via Settings Catalog", b:"Devices > Configuration > Settings Catalog. Search: Allow Dynamic Lock. Set to Enabled."},
+          {h:"Enable Windows Hello if using presence detection", b:"If relying on IR camera, ensure Windows Hello for Business is enabled in your Intune config."},
+          {h:"Instruct users to pair their phone", b:"Users pair phone via Settings > Bluetooth and devices. When they walk away with phone, laptop locks within ~30 seconds of signal loss."},
+          {h:"Test the behavior", b:"Pair a phone, walk away until Bluetooth signal drops. Device should lock automatically."}
+        ],
+        tip:null, warn:"Dynamic Lock is supplementary — not a replacement for the inactivity timeout. The 5-minute timer is your primary lock."
+      },
+      {
+        id:"H6", title:"Enable ASR rules — audit mode first, then enforce",
+        why:"ASR rules block OS behaviors malware relies on — macro-spawned processes, credential theft from LSASS, obfuscated script execution.",
+        est:"90 min", tools:["Intune"], risk:"high", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Create an ASR policy", b:"Endpoint Security > Attack Surface Reduction > Create Policy > Windows > Attack surface reduction rules."},
+          {h:"Set all rules to Audit mode", b:"Every rule to Audit mode. Priority rules: Block credential stealing from LSASS, Block Office apps from creating child processes, Block execution of obfuscated scripts, Block untrusted processes from USB."},
+          {h:"Run audit mode for 2 full weeks", b:"Two weeks covers typical business cycles. Shorter periods miss edge-case applications."},
+          {h:"Review audit detections", b:"Microsoft Defender portal > Reports > Attack surface reduction rules. Look for legitimate business apps flagged."},
+          {h:"Create exclusions for false positives", b:"Add exclusions by file path, process name, or certificate before switching to Block."},
+          {h:"Switch rules to Block one at a time", b:"Update each rule from Audit to Block individually. If something breaks you know exactly which rule caused it."}
+        ],
+        tip:"Start with credential theft and Office child process rules — highest security value, fewest false positives.", warn:"Switching all ASR rules to Block simultaneously without audit review reliably breaks business-critical software. The 2-week audit window is not optional."
+      },
+      {
+        id:"H7", title:"Disable USB/removable storage where not required",
+        why:"USB drives are one of the oldest data exfiltration vectors. If users do not need them there is no reason to leave them enabled.",
+        est:"45 min", tools:["Intune"], risk:"medium", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Identify who legitimately needs USB", b:"Work with business units. Typical legitimate needs: IT team (bootable media), finance (hardware tokens), AV/multimedia. Everyone else: block."},
+          {h:"Create a block policy via Settings Catalog", b:"Settings Catalog > search Removable disk > All removable storage classes: Deny all access > Enabled."},
+          {h:"Create exemption policy for authorized users", b:"Second policy with same setting but Disabled (allowing access). Assign to security group of authorized users only."},
+          {h:"Use Device Control for finer access", b:"Endpoint Security > Attack Surface Reduction > Device Control. Allow specific approved USB hardware IDs while blocking all others."},
+          {h:"Assign block broadly, exemption to authorized group", b:"Block policy goes to All Devices. Exemption goes to authorized users group. Test conflict resolution on pilot device first."},
+          {h:"Test and communicate", b:"Insert USB on test device with block policy. Should show no response or Access Denied. Communicate 1 week before rollout."}
+        ],
+        tip:"YubiKeys and RSA tokens use HID class not removable storage class. A storage block policy will not affect them.", warn:null
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // PHASE 4 — THREAT DETECTION (T1–T5)
+  // ─────────────────────────────────────────────
+  {
+    id:"ph-threat", name:"Threat Detection", icon:"⚡", color:"#22C55E", note:"",
+    items:[
+      {
+        id:"T1", title:"Confirm SentinelOne agent deployed on all endpoints",
+        why:"A single unprotected endpoint is all an attacker needs. Coverage gaps are blind spots.",
+        est:"30 min", tools:["S1"], risk:"critical", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Pull agent coverage report from S1", b:"S1 Management Console > Endpoints. Export full list as CSV: hostname, agent version, last seen, site, group."},
+          {h:"Cross-reference with Intune device list", b:"Export Intune device list. Compare by hostname. Devices in Intune but missing from S1 = unprotected endpoints."},
+          {h:"Check deployment method", b:"Confirm how S1 is deployed — Intune Win32 app, SCCM, or GPO. Validate assignment targets All Devices not a pilot subset."},
+          {h:"Identify stale or offline agents", b:"Filter for Last seen > 7 days ago. Investigate — may be off-network, decommissioned, or isolated."},
+          {h:"Deploy to coverage gaps", b:"Package S1 agent as Win32 app in Intune. Installer must include your site-specific token from S1 console > Settings > Sites."}
+        ],
+        tip:"SentinelOne site tokens are environment-specific. Using the wrong token enrolls the device to the wrong S1 site where your policies do not apply.", warn:null
+      },
+      {
+        id:"T2", title:"Validate S1 protect mode is active (not detect-only)",
+        why:"Detect mode tells you about threats. Protect mode stops them. Running detect-only means watching malware execute.",
+        est:"20 min", tools:["S1"], risk:"critical", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Check policy mode in S1 console", b:"Sentinels > Policies. For each policy group, check Protection Mode. Should read Protect — not Detect."},
+          {h:"Check every level of the hierarchy", b:"S1 policies are hierarchical: Global > Site > Group. A single group in Detect mode while everything else is Protect is a gap."},
+          {h:"Validate AI and protection settings", b:"Within each policy confirm: Behavioral AI = Enabled, Static AI = Enabled, Ransomware protection = Enabled, On-write scan = Enabled."},
+          {h:"Test with EICAR", b:"Download EICAR test file on a test endpoint. In Protect mode S1 should auto-quarantine it. Confirm in S1 Threats dashboard."},
+          {h:"Document any Detect-mode exceptions", b:"If any group is in Detect for a legitimate reason, document with risk acceptance sign-off and a target date for moving to Protect."}
+        ],
+        tip:null, warn:"Leaving groups in Detect mode without formal sign-off is not a risk acceptance — it is an undocumented gap. Every exception needs a named owner and target date."
+      },
+      {
+        id:"T3", title:"Enable S1 Tamper Protection",
+        why:"Malware that disables your EDR agent blinds your detection. Tamper Protection makes the agent unkillable without a passphrase.",
+        est:"15 min", tools:["S1"], risk:"critical", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Locate Anti-Tamper in policy settings", b:"S1 Console > Sentinels > Policies > select policy > Agent tab."},
+          {h:"Enable Anti-Tamper", b:"Set Anti-Tamper to Enabled. Save and publish policy. Prevents S1 service from being stopped or uninstalled without passphrase."},
+          {h:"Set and secure the passphrase", b:"Store in corporate password vault. Restrict access to senior IT staff only."},
+          {h:"Test tamper protection", b:"On test device, try Stop-Service -Name SentinelAgent in PowerShell. Should fail with Access Denied."},
+          {h:"Confirm tamper attempts are logged", b:"Any tamper attempt generates an event in S1 console under Activity. Verify test attempt appears in log."}
+        ],
+        tip:"Tamper Protection should be 100% deployed. An endpoint without it can be neutralized before S1 can respond.", warn:null
+      },
+      {
+        id:"T4", title:"Confirm S1 is sole EDR — no dual-agent conflict",
+        why:"Two active EDR agents on the same device cause missed detections, excessive CPU load, and unpredictable behavior.",
+        est:"30 min", tools:["S1","Intune"], risk:"high", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Determine your EDR strategy", b:"Pick one: SentinelOne as sole EDR, or MDE as primary with S1 in co-management. Never both running in full active protection."},
+          {h:"Check Defender AV status", b:"Run: Get-MpComputerStatus. AMRunningMode = Normal means Defender AV is actively running alongside S1. Passive means correctly co-existing."},
+          {h:"If S1 is sole EDR — put Defender in passive", b:"S1 should auto-push Defender to passive on install. If not, create Intune Settings Catalog policy to disable Defender AV."},
+          {h:"If running MDE alongside S1", b:"Configure co-existence: S1 handles active protection, MDE handles telemetry. Follow S1 official MDE co-management documentation."},
+          {h:"Verify performance", b:"Check CPU and memory on devices during business hours. Dual full-scan EDRs add 15-30% resource overhead."}
+        ],
+        tip:null, warn:"Always explicitly check AMRunningMode — installed does not mean active, and active does not mean correctly configured."
+      },
+      {
+        id:"T5", title:"Triage S1 threat dashboard — alerts older than 48 hours",
+        why:"An alert that is 3 days old is an incident that was not responded to. Stale alerts indicate a process gap or a real threat that had time to spread.",
+        est:"30 min", tools:["S1"], risk:"critical", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Open Incidents > Threats, filter Unresolved", b:"In S1 console, go to Incidents > Threats. Filter by Status: Unresolved. Sort by Created date ascending — oldest first."},
+          {h:"Triage each open threat", b:"For each: true positive or false positive? Has S1 taken automated action (quarantine, kill, remediate)? Is the endpoint still network-connected?"},
+          {h:"Escalate any critical unresolved threats", b:"Any threat classified Malicious with no action taken and no owner is a critical finding. Escalate immediately to your security lead."},
+          {h:"Resolve false positives and add exclusions", b:"Mark confirmed FPs as Resolved > False Positive. Add permanent exclusions for recurring FPs from the same path or process."},
+          {h:"Document findings", b:"Record: total open threats, oldest unresolved date, number of Critical/High with no action taken, actions you took during triage."},
+          {h:"Formalize an alert SLA", b:"Recommend: Critical = respond within 4 hours, High = 24 hours, Medium = 5 business days. Assign a named owner for daily alert review."}
+        ],
+        tip:"If you find threats that are weeks old with no action taken, this is a process failure — not just a tooling issue. Alert review needs a named owner with a named backup.", warn:null
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // PHASE 5 — VULNERABILITY MANAGEMENT (V1–V5)
+  // ─────────────────────────────────────────────
+  {
+    id:"ph-vuln", name:"Vulnerability Management", icon:"🔬", color:"#F59E0B", note:"",
+    items:[
+      {
+        id:"V1", title:"Run authenticated Qualys scan across all in-scope endpoints",
+        why:"You cannot patch what you do not know is vulnerable. A Qualys Cloud Agent scan gives you authenticated, local vulnerability data without scan credentials or network dependencies.",
+        est:"60 min", tools:["Qualys"], risk:"high", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Confirm Cloud Agent deployment", b:"Qualys portal > Cloud Agent > Agents. Check all in-scope endpoints show an active agent with a recent last check-in. Cross-reference with Intune device list."},
+          {h:"Deploy agent to gap devices", b:"Download the Qualys Cloud Agent MSI from the portal — activation key embedded. Package as Win32 app in Intune and deploy to All Devices."},
+          {h:"Trigger an on-demand scan", b:"Vulnerability Management > Scans > New Scan > Cloud Agent scan. Target your asset group. Cloud Agents scan locally — no scan credentials required."},
+          {h:"Wait for completion and pull report", b:"Scans > Finished Scans. Reports > New Report > Vulnerability Report. Filter to your in-scope asset group. Export as PDF and CSV."},
+          {h:"Store as evidence", b:"Archive both exports with date stamp in your assessment evidence folder."}
+        ],
+        tip:"For Horizon VDI non-persistent desktops: scan the gold image parent VM directly, not just provisioned desktops, to get accurate results.", warn:null
+      },
+      {
+        id:"V2", title:"Identify critical/high CVEs — remediate within 15 days",
+        why:"Not all vulnerabilities are equal. Prioritising by exploitability and exposure prevents you from patching low-risk items while high-risk ones sit open.",
+        est:"45 min", tools:["Qualys"], risk:"high", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Filter by severity in Qualys", b:"Vulnerability Management > Vulnerabilities, filter by Severity: 4 and 5 (Critical and High, maps to CVSS 7.0+). Sort by CVSS score descending."},
+          {h:"Layer in exploitability context", b:"Is the CVE on the CISA Known Exploited Vulnerabilities (KEV) list? Is the affected software internet-facing? Does it handle credentials?"},
+          {h:"Group by software title", b:"Export and group by affected application. Patch Chrome across 200 devices vs. one obscure LOB app on 3 devices — sequence by volume and risk."},
+          {h:"Assign remediation SLAs", b:"Critical + KEV listed = 7 days. High (CVSS 7.0-8.9) = 15 days. Medium = 30 days. Low = next scheduled maintenance."},
+          {h:"Assign owners per software", b:"Map each finding to a named owner: Intune admin for OS patches, app owner for LOB software, infra team for server-side apps."},
+          {h:"Validate remediation with a rescan", b:"After patching, run a targeted Qualys scan on the same asset group. Confirm the CVE no longer appears before closing the ticket."}
+        ],
+        tip:null, warn:"CVSS score alone is insufficient for prioritisation. A CVSS 7.5 actively exploited in your internet-facing VPN client is more urgent than a CVSS 9.8 in an air-gapped test system."
+      },
+      {
+        id:"V3", title:"Configure Windows Update for Business rings via Intune",
+        why:"Unpatched OS is the most common attack vector for ransomware and worms. Update rings give you control over rollout speed without leaving devices unpatched indefinitely.",
+        est:"45 min", tools:["Intune"], risk:"high", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Create your ring structure", b:"Ring 0 = IT pilot (5-10 IT devices, 0-day deferral). Ring 1 = Early adopters (10-15% of users, 7-day deferral). Ring 2 = Broad production (remaining users, 14-day deferral)."},
+          {h:"Create Entra ID groups for each ring", b:"In Entra ID, create security groups: WUfB-Ring0-Pilot, WUfB-Ring1-Early, WUfB-Ring2-Broad. Populate with appropriate devices."},
+          {h:"Create an Update Ring policy per ring", b:"Devices > Windows update rings > Create profile. Configure per ring: Quality update deferral (Ring 0: 0d, Ring 1: 7d, Ring 2: 14d). Feature update deferral: 30 days for all. Deadline for quality updates: 5 days. Restart grace period: 2 days."},
+          {h:"Assign policies to groups", b:"Assign each update ring policy to its corresponding Entra ID group."},
+          {h:"Monitor update compliance", b:"Devices > Monitor > Windows update rings overview. Track percentage of devices on the latest patch per ring."}
+        ],
+        tip:"Set a Deadline for quality updates (5 days) alongside your deferral period. Without a deadline, users can keep dismissing restart prompts indefinitely.", warn:null
+      },
+      {
+        id:"V4", title:"Audit third-party software patch status",
+        why:"Chrome, Adobe Reader, and Zoom are in the top exploited software list every year. OS patching without third-party app patching is half the job.",
+        est:"45 min", tools:["Qualys","Intune"], risk:"high", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Pull third-party findings from Qualys", b:"Filter vulnerabilities by Category: Third-party software. Focus on Chrome, Adobe Acrobat, Firefox, Zoom, 7-Zip, Java, VLC, Teams. Sort by number of affected hosts."},
+          {h:"Cross-reference with Intune app deployments", b:"Intune > Apps > All apps. Which flagged software is Intune-managed? These can be updated through the portal."},
+          {h:"Update Intune-managed apps", b:"Add new version, set old as superseded. Intune pushes update silently on next device check-in."},
+          {h:"Handle unmanaged apps via Remediation scripts", b:"Intune Remediation: Detection = check version, Remediation = silent update via winget or installer script."},
+          {h:"Flag Java separately", b:"Java is kept at old versions for LOB compatibility. Note which version is in use and which apps depend on it."}
+        ],
+        tip:"Adobe Acrobat Reader and Chrome are your highest-priority third-party patches every month without exception.", warn:null
+      },
+      {
+        id:"V5", title:"Verify Horizon VDI gold image is patched and re-published",
+        why:"Non-persistent VDI resets to the gold image on every session. If the image is unpatched, every session is unpatched.",
+        est:"60 min", tools:["Qualys"], risk:"high", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Check current gold image patch level", b:"Horizon Administrator > Catalog > Desktop Pools. Note parent VM snapshot. Power on in maintenance mode: Get-HotFix | Sort-Object InstalledOn -Descending."},
+          {h:"Apply patches to parent VM", b:"Run Windows Update in maintenance mode. Install all quality patches. Update third-party software baked into the image."},
+          {h:"Take a dated snapshot", b:"Snapshot parent VM: GoldImage-WIN11-YYYY-MM-DD. Keep at least 2 prior snapshots for rollback."},
+          {h:"Recompose the desktop pool", b:"Horizon Admin > pool > Recompose > select new snapshot. Schedule off-hours. Confirm pool returns to Provisioned before morning."},
+          {h:"Verify Qualys agent post-recompose", b:"Check Qualys portal for VDI hostnames. Confirm agents show recent check-in. If resetting, bake persistent agent activation into gold image startup."}
+        ],
+        tip:null, warn:"Set a calendar reminder for the Wednesday after Patch Tuesday every month. If you skip a month the VDI fleet silently falls behind."
+      }
+    ]
+  },
+  // ─────────────────────────────────────────────
+  // PHASE 6 — COMPLIANCE & DOCUMENTATION (C1–C5)
+  // ─────────────────────────────────────────────
+  {
+    id:"ph-compliance", name:"Compliance & Documentation", icon:"📋", color:"#94A3B8", note:"",
+    items:[
+      {
+        id:"C1", title:"Build Intune compliance policy aligned to baseline",
+        why:"Compliance policies define what secure looks like for a device. Without them Conditional Access has nothing to evaluate.",
+        est:"45 min", tools:["Intune"], risk:"high", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Create a compliance policy", b:"Devices > Compliance > Create policy > Windows 10 and later. Name: WIN-Compliance-Baseline-v1."},
+          {h:"Configure required settings", b:"BitLocker required: Yes. Secure Boot: Yes. Code integrity: Yes. Defender Antimalware: Yes. Real-time protection: Required. Windows Firewall: Required. Minimum OS version: your minimum supported build."},
+          {h:"Set grace period", b:"Actions for noncompliance: set 3-5 day grace period before marking non-compliant. Gives devices time to sync."},
+          {h:"Add user notification", b:"Add action: Send email to end user when device becomes non-compliant. Triggers self-remediation before IT intervention."},
+          {h:"Assign and monitor", b:"Assign broadly. Devices > Monitor > Device compliance. Review after 24-48 hours to understand baseline compliance rate."},
+          {h:"Identify top non-compliance reasons", b:"Compliance report shows per-setting failure counts. Use this to prioritise remediation systematically."}
+        ],
+        tip:"Compliance policies assess state — they do not enforce it. Enforcement comes from Conditional Access. The policy alone has no teeth.", warn:null
+      },
+      {
+        id:"C2", title:"Wire compliance policy to Conditional Access — block non-compliant",
+        why:"This is where compliance policy becomes enforcement. Non-compliant devices lose access to M365 apps automatically.",
+        est:"60 min", tools:["Intune","Entra"], risk:"critical", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Create a CA policy for device compliance", b:"Entra ID > CA > New policy. Name: Require-DeviceCompliance-AllUsers."},
+          {h:"Set scope", b:"Users: All users (exclude break-glass). Target resources: All cloud apps or start with Office 365 apps only for softer rollout."},
+          {h:"Set the grant control", b:"Under Grant, select Require device to be marked as compliant."},
+          {h:"Enable in report-only mode", b:"Set to Report-only for 7 days. Monitor CA > Insights and Reporting. Check: how many users would be blocked, which devices are non-compliant."},
+          {h:"Remediate non-compliant devices first", b:"Do not flip to Enabled while devices are still non-compliant. Get compliance rate above 95% before enforcing."},
+          {h:"Switch to Enabled and monitor", b:"Flip to On. Announce to users. Monitor Entra sign-in logs for CA failures."}
+        ],
+        tip:null, warn:"Shared devices, kiosks, and service account devices may not check into Intune regularly and will trigger non-compliance. Identify and exclude them explicitly before enabling."
+      },
+      {
+        id:"C3", title:"Run MDM Diagnostic Report on sample devices",
+        why:"Intune says policies are deployed. The MDM Diagnostic Report tells you whether they actually applied. These are not always the same answer.",
+        est:"30 min", tools:["Intune"], risk:"medium", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Select a representative sample", b:"Choose 5-10 devices across different user types: standard user, IT admin, remote worker, executive, Horizon VDI user if applicable."},
+          {h:"Generate the diagnostic report on each device", b:"Settings > Accounts > Access work or school > click the Entra account > Info > Create report. HTML report saves to the desktop."},
+          {h:"Review policy application status", b:"Check: MDM enrollment = Enrolled, all profiles = Applied, no Error or Conflict, compliance policy = Compliant."},
+          {h:"Cross-check in Intune admin center", b:"Devices > select device > Device configuration. Every assigned policy should show Succeeded."},
+          {h:"Force a sync if policies are missing", b:"On device: Settings > Accounts > Access work or school > Info > Sync. Or from Intune: Devices > select device > Sync. Wait 15 minutes and recheck."},
+          {h:"Screenshot and archive as evidence", b:"Screenshot the policy list from Intune for each sample device. Store in your assessment evidence folder with date stamp."}
+        ],
+        tip:"The MDM Diagnostic Report is the most useful single troubleshooting tool in Intune. Running it on a sample keeps you familiar with what healthy looks like.", warn:null
+      },
+      {
+        id:"C4", title:"Document gaps with risk ratings",
+        why:"A verbal list of gaps is not a deliverable. A dated, rated, owned gap register is what drives remediation and proves due diligence.",
+        est:"90 min", tools:[], risk:"medium", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Set up your gap register", b:"Spreadsheet columns: Control area, Specific control, Current state, Target state, Gap description, Risk rating, Owner, Due date, Status, Evidence link."},
+          {h:"Populate from assessment findings", b:"Go through all checklist items. For any not fully completed or with deviations, add a row. Be specific — percentages and counts, not vague descriptions."},
+          {h:"Apply consistent risk ratings", b:"Critical: exploitable, no compensating controls, immediate risk. High: significant exposure, inadequate controls. Medium: moderate exposure, improvement needed. Low: minor deviation."},
+          {h:"Assign realistic due dates", b:"Critical: 7-14 days. High: 30 days. Medium: 60-90 days. Low: next review cycle."},
+          {h:"Assign named owners", b:"Every gap needs a named individual — not a team or role. No named owner means it will not get fixed."},
+          {h:"Get formal sign-off", b:"Manager or CISO sign-off creates accountability and satisfies audit requirements."}
+        ],
+        tip:"Store the gap register in SharePoint, Confluence, or your ITSM — not someone's personal OneDrive.", warn:null
+      },
+      {
+        id:"C5", title:"Create ongoing assessment process document",
+        why:"The security posture you build today degrades silently without a recurring review process. This document is what makes the assessment continuous.",
+        est:"60 min", tools:[], risk:"medium", owner:"", evidence:"", status:"todo", note:"", verifiedAt:"",
+        steps:[
+          {h:"Define your recurring cadence", b:"Monthly = Qualys vulnerability scan, review open S1 alerts, patch compliance check. Quarterly = Intune policy review, CA policy audit, LAPS rotation verification, compliance report to management. Annually = Full endpoint security assessment, security baseline version review, user security awareness training."},
+          {h:"Assign named owners to each task", b:"Every recurring task needs a primary owner and a named backup. Write actual names — not role titles."},
+          {h:"Write step-by-step instructions for each task", b:"Document each recurring task so any team member can perform it. Include: where to navigate, what to check, what good looks like, what to do if something is wrong."},
+          {h:"Store it somewhere the whole team can access", b:"SharePoint, Confluence, or your ITSM knowledge base. Not someone's personal OneDrive."},
+          {h:"Set up recurring calendar invites", b:"Create non-deletable recurring meetings in your team calendar for each cadence."},
+          {h:"Schedule an annual review of this document itself", b:"Put a calendar reminder for 11 months from today to review and update the process document."}
+        ],
+        tip:"The 31-item checklist is a one-time assessment. This process document is what makes it continuous.", warn:null
+      }
+    ]
+  }
+];
+
+// ─────────────────────────────────────────────
+// PROCESS TRACK — Event-driven procedures (PR1–PR4)
+// ─────────────────────────────────────────────
+const DEFAULT_PROCESS = [
+  {
+    id:"PR1", title:"Device enrollment — new hire onboarding",
+    trigger:"Every new hire / device issued", category:"Provisioning", color:"#3B82F6", note:"",
+    why:"Every new device entering your environment without being properly enrolled and hardened is an immediate security gap.",
+    procedure:[
+      {h:"Verify device is enrolled and compliant in Intune before issuing", b:"Intune > Devices > All devices. Confirm device shows Enrolled and Compliant. Never issue a non-compliant device."},
+      {h:"Confirm SentinelOne agent is active", b:"Cross-reference hostname in S1 console. Agent should show Online with Protect mode active."},
+      {h:"Verify BitLocker is enabled and key is escrowed", b:"Entra ID > Devices > find device > BitLocker keys. Recovery key must be present before device leaves IT hands."},
+      {h:"Confirm user account is created and MFA is enrolled", b:"Entra ID > Users > find user > Authentication methods. MFA method must be registered before first login."},
+      {h:"Add device to appropriate Intune groups", b:"Ensure device is in correct groups for: Update ring, ASR policy, Firewall policy, Compliance policy."},
+      {h:"Run MDM Diagnostic Report", b:"On device: Settings > Accounts > Access work or school > Info > Create report. All assigned policies should show Applied."},
+      {h:"Log the enrollment", b:"Record: device hostname, serial number, assigned user, date issued, Intune enrollment status, S1 agent version, BitLocker key escrow confirmed."}
+    ],
+    tip:"Never rush onboarding to meet a start-date deadline. A device issued without proper enrollment is harder to remediate after the user has started.", warn:null
+  },
+  {
+    id:"PR2", title:"Device decommission — offboarding",
+    trigger:"Every leaver / device return", category:"Deprovisioning", color:"#EF4444", note:"",
+    why:"Offboarding is the most commonly neglected security process. A departed employee whose account and device are still active is an open door.",
+    procedure:[
+      {h:"Disable the user account in Entra ID immediately", b:"Entra ID > Users > find user > Edit > Account enabled = No. Do this on or before the last day. This revokes all active sessions within minutes via CA."},
+      {h:"Revoke all active sessions", b:"Entra ID > Users > find user > Revoke sessions. This immediately signs out all active browser and app sessions."},
+      {h:"Retrieve the device", b:"Follow your physical device return process. If remote, trigger Intune remote wipe: Devices > select device > Wipe."},
+      {h:"Wipe the device via Intune", b:"Intune > Devices > select device > Wipe. Choose Full wipe or Autopilot reset depending on whether device will be reissued. Confirm wipe completed."},
+      {h:"Remove device from Entra ID and Intune", b:"After confirmed wipe: Entra ID > Devices > find device > Delete."},
+      {h:"Remove from all security groups", b:"Check all Entra ID security groups for the user. Remove from any groups granting resource access, VPN, or application permissions."},
+      {h:"Check for shared resources owned by the user", b:"Shared mailboxes, OneDrive, Teams channels, SharePoint sites. Transfer ownership before disabling the account."},
+      {h:"Log the decommission", b:"Record: user name, last day, account disabled date/time, device serial, wipe confirmed date, groups removed from, shared resource transfers."}
+    ],
+    tip:"Set up a Joiner-Mover-Leaver workflow in your ITSM so offboarding triggers automatically when HR marks a departure.", warn:"Never wait until after a user's last day to disable their account. Security incidents from departing employees most commonly happen in the final days."
+  },
+  {
+    id:"PR3", title:"Monthly endpoint scope review",
+    trigger:"Monthly or when org structure changes", category:"Scope Management", color:"#8B5CF6", note:"",
+    why:"Your endpoint landscape is not static. New devices arrive, old ones get forgotten, office locations change, contractors come and go.",
+    procedure:[
+      {h:"Export current Intune device list", b:"Intune > Devices > All devices > Export. Date-stamp and compare to last month's export."},
+      {h:"Identify new devices since last review", b:"Devices in this month's export not in last month's. Confirm each was issued through standard onboarding."},
+      {h:"Identify devices missing since last review", b:"Devices in last month's export not in this month's. Confirm each was properly decommissioned. Any disappearing without a recorded offboarding is a security concern."},
+      {h:"Review devices not synced in 30+ days", b:"Filter Intune by Last sync > 30 days. May be: on extended leave (acceptable with documentation), decommissioned but not removed, or lost/stolen (escalate immediately)."},
+      {h:"Update Horizon VDI pool inventory", b:"Log into Horizon Admin. Check Desktop Pools for any new or decommissioned pools since last review. Confirm Qualys agent is present in all active gold images."},
+      {h:"Review contractor and temporary devices", b:"Contractor devices often fall through the cracks at contract end. Cross-reference active contractor list with Intune enrolled devices."},
+      {h:"Update scope documentation", b:"Update scope statement with current counts: corporate laptops, desktops, VDI sessions, enrolled mobile, contractors. Date-stamp it."}
+    ],
+    tip:"The monthly scope review takes 30 minutes when the process is documented. Schedule it on the first Monday of each month without exception.", warn:null
+  },
+  {
+    id:"PR4", title:"Quarterly privileged access review",
+    trigger:"Quarterly", category:"Access Control", color:"#F59E0B", note:"",
+    why:"Privilege creep is real. People accumulate access they no longer need. A quarterly review ensures only the right people have elevated access.",
+    procedure:[
+      {h:"Export all Global Administrators", b:"Entra ID > Roles and administrators > Global Administrator > Export members. This list should be very short — ideally 2-4 accounts for a standard org."},
+      {h:"Review all privileged role assignments", b:"Work through: Intune Administrator, Security Administrator, Conditional Access Administrator, Cloud Device Administrator. Every person should still need that access."},
+      {h:"Remove stale privileged assignments", b:"For any account no longer needing elevated access: remove the role assignment. Use PIM for just-in-time access if licensed."},
+      {h:"Review LAPS retrieval permissions", b:"Who can retrieve local admin passwords? Should be a small named group. Check Entra RBAC for LAPS-related roles."},
+      {h:"Review SentinelOne admin access", b:"S1 console > Settings > Users. Who has Full Admin vs Viewer vs SOC Analyst? Remove any accounts belonging to former staff or contractors."},
+      {h:"Review Qualys user list", b:"Qualys portal > Users. Remove former staff, review permission levels for current staff."},
+      {h:"Document all changes", b:"Record every removal and addition: who, what role, removed by, date. Store with quarterly review documentation."}
+    ],
+    tip:"If you find former employees still have active accounts in any of these systems, treat it as a security incident — not just a cleanup task.", warn:"Global Administrator should never be assigned permanently to individual user accounts. Use PIM with approval workflows for emergency access instead."
+  }
+];
+
+// ─────────────────────────────────────────────
+// OPS TRACK — Recurring tasks (OP1–OP10)
+// ─────────────────────────────────────────────
+const DEFAULT_OPS = [
+  {id:"OP1",title:"Triage S1 alerts older than 48 hours",cadence:"every2days",cadenceLabel:"Every 2 days",cadenceDays:2,category:"Threat Detection",color:"#22C55E",why:"Unreviewed alerts mean threats that had time to spread. A 2-day SLA keeps your response window tight.",est:"20 min",
+    steps:[{h:"Open Incidents > Threats, filter Unresolved",b:"Filter by Status: Unresolved. Sort by Created date ascending — oldest first."},{h:"Work through each open alert",b:"For each: true positive or false positive? Has S1 taken automated action? Is the endpoint still network-connected?"},{h:"Escalate any unresolved Malicious threats",b:"Any Malicious alert with no action taken and no owner = critical. Escalate to security lead immediately."},{h:"Resolve false positives and add exclusions",b:"Mark confirmed FPs as Resolved > False Positive. Add permanent exclusions for recurring FPs."},{h:"Log completion with notes",b:"Note any escalations or active threats found."}],
+    tip:"Consistent zero alerts usually means a config issue, not a clean environment. Verify S1 is in Protect mode.",warn:null,history:[]},
+  {id:"OP2",title:"Weekly S1 threat dashboard sweep",cadence:"weekly",cadenceLabel:"Weekly",cadenceDays:7,category:"Threat Detection",color:"#22C55E",why:"The daily triage catches individual alerts. The weekly sweep looks at patterns — recurring threat types, repeat-offender endpoints, policy gaps.",est:"15 min",
+    steps:[{h:"Review threat trends",b:"Dashboard > Threats. Total this week vs last week, top threat types, top affected endpoints."},{h:"Check repeat-offender endpoints",b:"Same device appearing multiple times may have a persistent threat or misconfigured exclusion."},{h:"Review agent coverage",b:"Endpoints > filter Last seen > 7 days ago. Any device not checking in needs investigation."},{h:"Check policy coverage",b:"Quick scan: Sentinels > Policies > look for any policy showing Detect under Protection Mode."},{h:"Note findings for monthly report",b:"3 sentences: threats found, actions taken, anything escalated."}],
+    tip:"Block this as a fixed 15-minute calendar slot. The moment it becomes ad hoc it stops happening.",warn:null,history:[]},
+  {id:"OP3",title:"Run Qualys vulnerability scan",cadence:"monthly",cadenceLabel:"Monthly",cadenceDays:30,category:"Vulnerability Management",color:"#F59E0B",why:"Vulnerabilities accumulate between patches. Monthly scanning keeps your CVE backlog visible and tracked.",est:"60 min",
+    steps:[{h:"Verify Cloud Agent health",b:"Qualys > Cloud Agent > Agents. Filter Last check-in > 7 days ago. Inactive agents = coverage gaps."},{h:"Trigger on-demand scan",b:"Vulnerability Management > Scans > New Scan > Cloud Agent scan > target full in-scope asset group."},{h:"Wait for completion and pull report",b:"Scans > Finished Scans. Reports > New Report > Vulnerability Report. Export PDF and CSV."},{h:"Compare to last month",b:"New CVEs that appeared, CVEs remediated (gone), Critical/High open more than 30 days."},{h:"Update remediation tracker",b:"New Critical/High findings get a row in gap register with owner and due date. Archive monthly report."}],
+    tip:null,warn:"If last month's Critical CVEs still show with no remediation activity, escalate to owner before logging completion.",history:[]},
+  {id:"OP4",title:"Review and remediate open CVEs",cadence:"monthly",cadenceLabel:"Monthly",cadenceDays:30,category:"Vulnerability Management",color:"#F59E0B",why:"Running a scan and not acting on it is security theatre. This is the follow-through.",est:"45 min",
+    steps:[{h:"Pull current open CVEs",b:"Qualys > Vulnerabilities > filter Severity 4 and 5. Export CSV. Add Days Open column — sort descending."},{h:"Escalate anything over SLA",b:"Critical overdue by 7+ days and High overdue by 15+ days need immediate escalation."},{h:"Push OS patches via Intune update rings",b:"Confirm Patch Tuesday updates are flowing through rings. Check Devices > Monitor > Windows update rings overview."},{h:"Push third-party app updates",b:"Chrome, Adobe, Zoom — verify latest version deployed in Intune."},{h:"Validate remediation with targeted rescan",b:"Run targeted Qualys scan. Confirm CVE no longer appears before closing the ticket."}],
+    tip:"Group CVEs by software title. Patching Chrome across 200 devices closes more risk per hour than five different one-off apps.",warn:null,history:[]},
+  {id:"OP5",title:"Audit third-party software patch status",cadence:"monthly",cadenceLabel:"Monthly",cadenceDays:30,category:"Vulnerability Management",color:"#F59E0B",why:"Chrome, Adobe, and Zoom are in the top exploited software list every year.",est:"45 min",
+    steps:[{h:"Pull third-party findings from Qualys",b:"Filter by Category: Third-party software. Focus on Chrome, Adobe Acrobat, Firefox, Zoom, 7-Zip, Java, VLC, Teams."},{h:"Cross-reference with Intune app deployments",b:"Intune > Apps > All apps. Which flagged software is Intune-managed?"},{h:"Update Intune-managed apps",b:"Add new version, set old as superseded. Intune pushes update silently on next device check-in."},{h:"Handle unmanaged apps via Remediation scripts",b:"Intune Remediation: Detection = check version, Remediation = silent update via winget."},{h:"Flag Java separately",b:"Note which version is in use and which apps depend on it."}],
+    tip:"Adobe Acrobat Reader and Chrome are your highest-priority third-party patches every month without exception.",warn:null,history:[]},
+  {id:"OP6",title:"Verify Horizon VDI gold image patched and re-published",cadence:"monthly",cadenceLabel:"Monthly (post Patch Tuesday)",cadenceDays:30,category:"Vulnerability Management",color:"#F59E0B",why:"Non-persistent VDI resets to the gold image on every session. If the image is unpatched every session is unpatched.",est:"60 min",
+    steps:[{h:"Check current gold image patch level",b:"Horizon Administrator > Catalog > Desktop Pools. Note parent VM snapshot. Power on in maintenance mode and check Get-HotFix."},{h:"Apply patches to parent VM",b:"Run Windows Update in maintenance mode. Install all quality patches and update third-party software."},{h:"Take a dated snapshot",b:"Snapshot parent VM: GoldImage-WIN11-YYYY-MM-DD. Keep at least 2 prior snapshots."},{h:"Recompose the desktop pool",b:"Horizon Admin > pool > Recompose > select new snapshot. Schedule off-hours."},{h:"Verify Qualys agent post-recompose",b:"Check Qualys portal for VDI hostnames. Confirm agents show recent check-in."}],
+    tip:null,warn:"Set a calendar reminder for the Wednesday after Patch Tuesday every month.",history:[]},
+  {id:"OP7",title:"Review Intune non-compliant devices",cadence:"weekly",cadenceLabel:"Weekly",cadenceDays:7,category:"Compliance",color:"#94A3B8",why:"Non-compliant devices accumulate quietly. Weekly review catches new issues before CA blocks legitimate users unexpectedly.",est:"20 min",
+    steps:[{h:"Pull non-compliant device report",b:"Intune > Devices > Monitor > Noncompliant devices. Note total count, compare to last week."},{h:"Identify top non-compliance reasons",b:"Which specific settings are failing most? Group by reason to see systemic vs individual device problems."},{h:"Triage new non-compliant devices",b:"Check last sync date, review device config errors, reach out to user or force a sync."},{h:"Escalate devices non-compliant for more than 7 days",b:"Any device non-compliant 7+ days with no remediation = escalate."},{h:"Note count and trend",b:"Log this week's non-compliant count, top reason, any escalations."}],
+    tip:"Sort by non-compliance duration not just total count. New yesterday is very different from 3 weeks.",warn:null,history:[]},
+  {id:"OP8",title:"MDM Diagnostic spot checks on sample devices",cadence:"quarterly",cadenceLabel:"Quarterly",cadenceDays:90,category:"Compliance",color:"#94A3B8",why:"Intune says policies are deployed. The MDM Diagnostic Report tells you whether they actually applied. These are not always the same answer.",est:"45 min",
+    steps:[{h:"Select a fresh sample each quarter",b:"5-10 devices rotating each quarter: one per business unit, recently enrolled device, device flagged for issues, remote worker device."},{h:"Generate diagnostic report on each device",b:"Settings > Accounts > Access work or school > Entra account > Info > Create report. HTML saves to desktop."},{h:"Review policy application status",b:"Check: MDM enrollment = Enrolled, all profiles = Applied, no Error or Conflict, compliance policy = Compliant."},{h:"Cross-check in Intune admin center",b:"Devices > select device > Device configuration. Every assigned policy should show Succeeded."},{h:"Document sample results as evidence",b:"Screenshot policy list for each sample device. Store in quarterly evidence folder with date stamp."}],
+    tip:"Running this quarterly on a sample keeps you familiar with what healthy looks like — so when something breaks you recognise it immediately.",warn:null,history:[]},
+  {id:"OP9",title:"Review Conditional Access policies",cadence:"quarterly",cadenceLabel:"Quarterly",cadenceDays:90,category:"Identity",color:"#8B5CF6",why:"CA policies accumulate. Old policies conflict with new ones, test policies get forgotten in report-only, and exclusions grow without review.",est:"45 min",
+    steps:[{h:"List all enabled CA policies",b:"Entra ID > CA > Policies > filter State: Enabled. Note any still in Report-only that were supposed to go live."},{h:"Check for stale or conflicting policies",b:"Duplicate policies for same users and apps, large exclusion lists, policies older than 12 months without review, test policies never cleaned up."},{h:"Verify break-glass exclusions",b:"In every enabled policy confirm both break-glass accounts are under Exclude > Users."},{h:"Review sign-in logs for CA failures",b:"Entra ID > Monitoring > Sign-in logs > filter CA: Failure. Investigate any legitimate user accounts being blocked."},{h:"Review and tighten exclusions",b:"Former employees, old service accounts, replaced apps — remove from exclusion lists."}],
+    tip:null,warn:"CA exclusions are the most common way attackers maintain access after credentials are compromised.",history:[]},
+  {id:"OP10",title:"Full endpoint security assessment",cadence:"annually",cadenceLabel:"Annually",cadenceDays:365,category:"Assessment",color:"#3B82F6",why:"The security landscape changes. Tools update, attack techniques evolve, staff changes, configurations drift. Annual assessment resets your baseline.",est:"2-3 days",
+    steps:[{h:"Re-run the full setup checklist",b:"Every verified item — re-verify. Do not assume it is still correct. Configuration drift is real and common."},{h:"Review all operational task completion history",b:"Check completion dates for every recurring task. Identify any missed or consistently late."},{h:"Run full Qualys scan and compare to baseline",b:"Compare current CVE list to annual baseline: new CVEs, remediated CVEs, any open more than 90 days."},{h:"Review security baseline version",b:"Has Microsoft released a new Windows MDM Security Baseline? Check S1 agent version and Qualys Cloud Agent version too."},{h:"Update gap register and process document",b:"Revise with current findings. Update process document for any tool or procedure changes. Fresh sign-off from CISO or manager."},{h:"Present findings to stakeholders",b:"One-page summary: controls verified, gaps found, gaps remediated since last assessment, outstanding items with owners and due dates."}],
+    tip:"Start the annual assessment at least 6 weeks before any audit or compliance deadline.",warn:null,history:[]}
+];
+
+// ============ STORE ============
+const SK="rb6_store";
+const RISKS=["critical","high","medium","low"];
+const RC={critical:"#F87171",high:"#FBBF24",medium:"#60A5FA",low:"#34D399"};
+const RD={critical:"rgba(248,113,113,0.12)",high:"rgba(251,191,36,0.12)",medium:"rgba(96,165,250,0.12)",low:"rgba(52,211,153,0.12)"};
+const BM={Intune:"ib-intune",S1:"ib-s1",Qualys:"ib-qualys",Entra:"ib-entra",Duo:"ib-duo"};
+
+function buildDefault(){
+  return {
+    phases:DEFAULT_SETUP.map(ph=>({
+      ...ph, note:"",
+      items:ph.items.map(i=>({...i,steps:[...(i.steps||[])],status:"todo",note:"",evidence:"",owner:i.owner||"",risk:i.risk||"high",verifiedAt:""}))
+    })),
+    process: DEFAULT_PROCESS.map(p=>({...p,note:""})),
+    ops: DEFAULT_OPS.map(t=>({...t,history:[]}))
+  };
+}
+function loadStore(){try{const s=localStorage.getItem(SK);if(s)return JSON.parse(s);}catch(e){}return buildDefault();}
+function saveStore(){try{localStorage.setItem(SK,JSON.stringify(store));}catch(e){}}
+
+let store=loadStore();
+let editMode=false, activeTab="all", qsFocus=0;
+let pendingDel=null, addItemTarget=null, pendingReset=null;
+let noteTimers={};
+
+function genId(){return Math.random().toString(36).slice(2,8).toUpperCase();}
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function today(){return new Date().toLocaleDateString("en-CA");}
+
+// ============ MODALS ============
+function om(id){document.getElementById(id)?.classList.add("open");}
+function cm(id){document.getElementById(id)?.classList.remove("open");}
+
+// ============ EDIT MODE ============
+function toggleEdit(){
+  editMode=!editMode;
+  const btn=document.getElementById("edit-btn");
+  btn.classList.toggle("edit-active",editMode);
+  btn.textContent=editMode?"✏ Editing":"✏ Edit";
+  renderAll();
+}
+
+// ============ PROGRESS ============
+function updateProgress(){
+  let ver=0,inp=0,todo=0,crit=0,notreq=0;
+  store.phases.forEach(ph=>ph.items.forEach(item=>{
+    if(item.status==="notreq")notreq++;
+    else if(item.status==="verified")ver++;
+    else if(item.status==="inplace")inp++;
+    else todo++;
+    if(item.risk==="critical"&&item.status==="todo")crit++;
+  }));
+  const total=ver+inp+todo; // excludes notreq from count and progress
+  const opsTasks=(store.ops||DEFAULT_OPS).map((t,i)=>({...DEFAULT_OPS[i],...t}));
+  const ov=opsTasks.filter(t=>getOpsStatus(t)==="overdue").length;
+  document.getElementById("ts-ver").textContent=ver;
+  document.getElementById("ts-inp").textContent=inp;
+  document.getElementById("ts-todo").textContent=todo;
+  document.getElementById("ts-crit").textContent=crit;
+  document.getElementById("ts-notreq").textContent=notreq;
+  document.getElementById("prog-fill").style.width=total?Math.round((ver+inp*0.5)/total*100)+"%":"0%";
+  document.getElementById("tc-all").textContent=total+notreq;
+  document.getElementById("tc-todo").textContent=todo;
+  document.getElementById("tc-inplace").textContent=inp;
+  document.getElementById("tc-verified").textContent=ver;
+  document.getElementById("tc-notreq").textContent=notreq;
+}
+
+// ============ TAB FILTER ============
+function setTab(t){
+  activeTab=t;
+  ["all","todo","inplace","verified","notreq"].forEach(x=>{
+    document.getElementById("tab-"+x)?.classList.toggle("active",x===t);
+  });
+  applyFilters();
+}
+
+function applyFilters(){
+  const search=(document.getElementById("search-input")?.value||"").toLowerCase();
+  const riskF=document.getElementById("risk-filter")?.value||"all";
+  let anyVisible=false;
+  store.phases.forEach((ph,pi)=>{
+    let phaseHasVisible=false;
+    ph.items.forEach((item,ii)=>{
+      const el=document.getElementById(`item-row-${pi}-${ii}`);
+      if(!el)return;
+      const tabMatch=activeTab==="all"||(activeTab==="notreq"?item.status==="notreq":item.status===activeTab&&item.status!=="notreq");
+      const riskMatch=riskF==="all"||item.risk===riskF;
+      const searchMatch=!search||item.title.toLowerCase().includes(search)||
+        (item.note||"").toLowerCase().includes(search)||
+        (item.why||"").toLowerCase().includes(search)||
+        (item.owner||"").toLowerCase().includes(search)||
+        (item.steps||[]).some(s=>s.h.toLowerCase().includes(search)||s.b.toLowerCase().includes(search));
+      const show=tabMatch&&riskMatch&&searchMatch;
+      el.classList.toggle("item-hidden",!show);
+      if(show)phaseHasVisible=true;
+    });
+    const phEl=document.getElementById(`phase-block-${pi}`);
+    if(phEl)phEl.classList.toggle("hidden-all",!phaseHasVisible&&activeTab!=="all");
+    if(phaseHasVisible)anyVisible=true;
+  });
+  const page=document.getElementById("page");
+  const existing=page.querySelector(".empty-state");
+  if(!anyVisible&&activeTab!=="all"){
+    if(!existing){
+      const div=document.createElement("div"); div.className="empty-state";
+      div.innerHTML=`<div class="empty-icon">📭</div><div>No items in <strong>${activeTab}</strong> — move items here using the status buttons on each checklist item.</div>`;
+      page.appendChild(div);
+    }
+  } else if(existing) existing.remove();
+}
+
+// ============ STATUS CYCLE ============
+function cycleStatus(pi,ii,e){
+  e.stopPropagation();
+  const item=store.phases[pi].items[ii];
+  const cycle={todo:"inplace",inplace:"verified",verified:"notreq",notreq:"todo"};
+  item.status=cycle[item.status||"todo"];
+  if(item.status==="verified")item.verifiedAt=today();
+  else item.verifiedAt="";
+  saveStore(); updateProgress();
+  // Update row classes and check mark in place
+  const row=document.getElementById(`item-row-${pi}-${ii}`);
+  if(row){
+    row.className=`item-row status-${item.status}`;
+    const chk=row.querySelector(".item-check");
+    if(chk){
+      chk.className="item-check"+(item.status==="verified"?" verified":item.status==="inplace"?" inplace":item.status==="notreq"?" notreq":"");
+      chk.textContent=item.status==="verified"?"✓":item.status==="inplace"?"~":item.status==="notreq"?"—":"";
+    }
+    updateStatusPills(pi,ii,item.status);
+    // show/hide notreq reason row
+    const nrr=row.querySelector(".notreq-reason-row");
+    if(nrr)nrr.classList.toggle("visible",item.status==="notreq");
+  }
+  applyFilters();
+}
+
+function setStatus(pi,ii,s){
+  const item=store.phases[pi].items[ii]; if(!item)return;
+  item.status=s;
+  if(s==="verified")item.verifiedAt=today(); else item.verifiedAt="";
+  if(s!=="notreq")item.notreqReason=""; // clear reason when leaving notreq
+  saveStore(); updateProgress();
+  const row=document.getElementById(`item-row-${pi}-${ii}`);
+  if(row){
+    row.className=`item-row status-${s}`;
+    const chk=row.querySelector(".item-check");
+    if(chk){
+      chk.className="item-check"+(s==="verified"?" verified":s==="inplace"?" inplace":s==="notreq"?" notreq":"");
+      chk.textContent=s==="verified"?"✓":s==="inplace"?"~":s==="notreq"?"—":"";
+    }
+    updateStatusPills(pi,ii,s);
+    const stamp=row.querySelector(".verified-stamp");
+    if(stamp)stamp.textContent=s==="verified"?`✓ Verified ${item.verifiedAt}`:"";
+    const nrr=row.querySelector(".notreq-reason-row");
+    if(nrr){
+      nrr.classList.toggle("visible",s==="notreq");
+      const inp=nrr.querySelector(".notreq-reason-input");
+      if(inp&&s==="notreq")setTimeout(()=>inp.focus(),50);
+    }
+  }
+  applyFilters();
+}
+
+function updateStatusPills(pi,ii,s){
+  const body=document.getElementById(`item-body-${pi}-${ii}`); if(!body)return;
+  body.querySelectorAll(".spill-btn").forEach(b=>{
+    b.className="spill-btn";
+    if(b.dataset.s===s)b.className=`spill-btn active-${s}`;
+  });
+  const stamp=body.querySelector(".verified-stamp");
+  const item=store.phases[pi].items[ii];
+  if(stamp)stamp.textContent=s==="verified"&&item?.verifiedAt?`✓ Verified ${item.verifiedAt}`:"";
+  // show/hide notreq reason field inside expanded body too
+  const nrf=body.querySelector(".notreq-reason-body");
+  if(nrf)nrf.style.display=s==="notreq"?"block":"none";
+}
+
+// ============ NOTES ============
+function saveNotreqReason(pi,ii,val){
+  const item=store.phases[pi]?.items[ii]; if(!item)return;
+  item.notreqReason=val; saveStore();
+  // sync the inline reason row too
+  const inlineInput=document.getElementById(`nrr-${pi}-${ii}`)?.querySelector(".notreq-reason-input");
+  if(inlineInput&&inlineInput.value!==val)inlineInput.value=val;
+}
+function saveItemNote(pi,ii,val){
+  const item=store.phases[pi]?.items[ii]; if(!item)return;
+  item.note=val; saveStore();
+  const ind=document.getElementById(`note-saved-${pi}-${ii}`);
+  if(ind){ind.style.opacity="1"; clearTimeout(noteTimers[`${pi}-${ii}`]); noteTimers[`${pi}-${ii}`]=setTimeout(()=>ind.style.opacity="0",1500);}
+}
+function savePhaseNote(pi,val){if(store.phases[pi]){store.phases[pi].note=val;saveStore();}}
+function saveEvidence(pi,ii,val){const item=store.phases[pi]?.items[ii];if(item){item.evidence=val;saveStore();}}
+function saveWhy(pi,ii,val){const item=store.phases[pi]?.items[ii];if(item){item.why=val;saveStore();}}
+function saveOwner(pi,ii,val){const item=store.phases[pi]?.items[ii];if(item){item.owner=val;saveStore();}}
+function saveEst(pi,ii,val){const item=store.phases[pi]?.items[ii];if(item){item.est=val;saveStore();}}
+function setRisk(pi,ii,r){
+  const item=store.phases[pi]?.items[ii]; if(!item)return;
+  item.risk=r; saveStore();
+  const row=document.getElementById(`item-row-${pi}-${ii}`);
+  if(row){const dot=row.querySelector(".item-risk-dot");if(dot)dot.style.background=RC[r]||RC.medium;}
+  const body=document.getElementById(`item-body-${pi}-${ii}`);
+  if(body){body.querySelectorAll(".risk-pill").forEach(p=>{const active=p.dataset.r===r;p.style.background=active?RD[r]:"transparent";p.style.borderColor=active?RC[r]+"66":"var(--border)";p.style.color=active?RC[r]:"var(--text3)";});}
+}
+
+// ============ STEPS ============
+function updStep(pi,ii,si,field,val){
+  const s=store.phases[pi]?.items[ii]?.steps?.[si]; if(!s)return;
+  s[field]=val; saveStore();
+}
+function addStep(pi,ii){
+  const item=store.phases[pi]?.items[ii]; if(!item)return;
+  if(!item.steps)item.steps=[];
+  item.steps.push({h:"New step",b:"Describe what to do here."});
+  saveStore();
+  const container=document.getElementById(`steps-${pi}-${ii}`);
+  if(container){
+    const si=item.steps.length-1;
+    container.insertAdjacentHTML("beforeend",renderStep(pi,ii,{h:"New step",b:"Describe what to do here."},si));
+    applyEditToSteps(pi,ii);
+  }
+}
+function delStep(pi,ii,si){
+  store.phases[pi]?.items[ii]?.steps?.splice(si,1); saveStore();
+  const container=document.getElementById(`steps-${pi}-${ii}`);
+  if(container){container.innerHTML=renderSteps(pi,ii,store.phases[pi].items[ii].steps);}
+  applyEditToSteps(pi,ii);
+}
+
+// ============ TITLE EDIT ============
+function saveTitle(pi,ii,val){
+  const item=store.phases[pi]?.items[ii]; if(!item)return;
+  item.title=val; saveStore();
+  const disp=document.getElementById(`title-disp-${pi}-${ii}`); if(disp)disp.textContent=val;
+}
+function savePhaseName(pi,val){if(store.phases[pi]){store.phases[pi].name=val;saveStore();const d=document.getElementById(`phase-name-disp-${pi}`);if(d)d.textContent=val;}}
+
+// ============ EXPAND/COLLAPSE ============
+function toggleItem(pi,ii){
+  const body=document.getElementById(`item-body-${pi}-${ii}`);
+  const btn=document.getElementById(`expand-btn-${pi}-${ii}`);
+  if(!body)return;
+  const isOpen=body.classList.toggle("open");
+  if(btn)btn.textContent=isOpen?"▲ Hide steps":"▼ View steps";
+}
+function togglePhase(pi){
+  const block=document.getElementById("phase-block-"+pi);
+  if(block){
+    block.classList.toggle("collapsed");
+    const btn=block.querySelector(".ph-collapse-btn");
+    if(btn)btn.textContent=block.classList.contains("collapsed")?"Expand":"Collapse";
+  }
+}
+function expandAll(){store.phases.forEach((_,pi)=>{document.getElementById(`phase-block-${pi}`)?.classList.remove("collapsed");});}
+function collapseAll(){store.phases.forEach((_,pi)=>{document.getElementById(`phase-block-${pi}`)?.classList.add("collapsed");});}
+
+// ============ ADD / DELETE ============
+function openAddItem(pi){
+  addItemTarget=pi;
+  document.getElementById("add-item-sub").textContent="Adding to: "+store.phases[pi].name;
+  ["ai-title","ai-why","ai-est","ai-owner"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  document.getElementById("ai-risk").value="high";
+  om("add-item-modal"); setTimeout(()=>document.getElementById("ai-title")?.focus(),50);
+}
+function confirmAddItem(){
+  const title=document.getElementById("ai-title")?.value.trim(); if(!title)return;
+  const pi=addItemTarget;
+  store.phases[pi].items.push({
+    id:"CI"+genId(), title, why:document.getElementById("ai-why").value.trim(),
+    est:document.getElementById("ai-est").value.trim(), risk:document.getElementById("ai-risk").value,
+    owner:document.getElementById("ai-owner").value.trim(),
+    tools:[], steps:[{h:"Step 1",b:"Describe what to do here."}],
+    tip:"", warn:"", status:"todo", note:"", notreqReason:"", evidence:"", verifiedAt:""
+  });
+  saveStore(); cm("add-item-modal"); renderAll();
+}
+function confirmAddPhase(){
+  const name=document.getElementById("ap-name")?.value.trim(); if(!name)return;
+  store.phases.push({id:genId(),name,icon:"📌",color:"#64748B",note:"",items:[]});
+  saveStore(); cm("add-phase-modal"); renderAll();
+}
+function delItemPrompt(pi,ii){
+  pendingDel={type:"item",pi,ii};
+  document.getElementById("del-title").textContent="Delete item?";
+  document.getElementById("del-sub").textContent=`"${store.phases[pi].items[ii].title}" will be permanently removed.`;
+  om("del-modal");
+}
+function delPhasePrompt(pi){
+  pendingDel={type:"phase",pi};
+  document.getElementById("del-title").textContent="Delete phase?";
+  document.getElementById("del-sub").textContent=`"${store.phases[pi].name}" and all ${store.phases[pi].items.length} items will be permanently removed.`;
+  om("del-modal");
+}
+function confirmDel(){
+  if(!pendingDel)return;
+  if(pendingDel.type==="item")store.phases[pendingDel.pi].items.splice(pendingDel.ii,1);
+  if(pendingDel.type==="phase")store.phases.splice(pendingDel.pi,1);
+  saveStore(); cm("del-modal"); pendingDel=null; renderAll();
+}
+
+// ============ MOVE ITEM ============
+function moveItem(pi,ii){
+  const sel=document.getElementById(`move-sel-${pi}-${ii}`); if(!sel)return;
+  const destPi=parseInt(sel.value); if(destPi===pi)return;
+  const item=store.phases[pi].items.splice(ii,1)[0];
+  store.phases[destPi].items.push(item); saveStore(); renderAll();
+}
+function duplicateItem(pi,ii){
+  const item=store.phases[pi].items[ii]; if(!item)return;
+  const copy={...item,id:"D"+genId(),title:item.title+" (copy)",status:"todo",note:"",evidence:"",verifiedAt:"",steps:[...(item.steps||[]).map(s=>({...s}))]};
+  store.phases[pi].items.splice(ii+1,0,copy); saveStore(); renderAll();
+}
+
+// ============ RENDERING ============
+function renderStep(pi,ii,step,si){
+  return `<div class="step" id="step-${pi}-${ii}-${si}">
+    <div class="step-num">${si+1}</div>
+    <div class="step-body">
+      <div class="step-h" id="sh-${pi}-${ii}-${si}">${step.h}</div>
+      <input class="step-h-input" id="shi-${pi}-${ii}-${si}" value="${esc(step.h)}" oninput="updStep(${pi},${ii},${si},'h',this.value)">
+      <div class="step-b" id="sb-${pi}-${ii}-${si}">${step.b}</div>
+      <textarea class="step-b-input" id="sbi-${pi}-${ii}-${si}" oninput="updStep(${pi},${ii},${si},'b',this.value)">${esc(step.b)}</textarea>
+    </div>
+    <button class="step-del-btn" onclick="delStep(${pi},${ii},${si})" title="Delete step">✕</button>
+  </div>`;
+}
+function renderSteps(pi,ii,steps){return(steps||[]).map((s,si)=>renderStep(pi,ii,s,si)).join("");}
+function applyEditToSteps(pi,ii){
+  const container=document.getElementById(`steps-${pi}-${ii}`); if(!container)return;
+  container.querySelectorAll(".step-h").forEach(e=>e.style.display=editMode?"none":"block");
+  container.querySelectorAll(".step-h-input").forEach(e=>e.style.display=editMode?"block":"none");
+  container.querySelectorAll(".step-b").forEach(e=>e.style.display=editMode?"none":"block");
+  container.querySelectorAll(".step-b-input").forEach(e=>e.style.display=editMode?"block":"none");
+  container.querySelectorAll(".step-del-btn").forEach(e=>e.classList.toggle("vis",editMode));
+}
+
+function renderItem(ph,pi,item,ii){
+  const rc=RC[item.risk||"high"];
+  const rd=RD[item.risk||"high"];
+  const badges=(item.tools||[]).map(t=>`<span class="ibadge ${BM[t]||""}">${t}</span>`).join("");
+  const checkClass=item.status==="verified"?" verified":item.status==="inplace"?" inplace":"";
+  const checkText=item.status==="verified"?"✓":item.status==="inplace"?"~":"";
+  const phaseOptions=store.phases.map((p,i)=>`<option value="${i}"${i===pi?" selected":""}>${p.name}</option>`).join("");
+  const stepsHtml=renderSteps(pi,ii,item.steps);
+
+  return `
+  <div class="item-row status-${item.status}" id="item-row-${pi}-${ii}">
+    <!-- ITEM HEADER -->
+    <div class="item-header" onclick="toggleItem(${pi},${ii})">
+      <div class="item-check${checkClass}" onclick="cycleStatus(${pi},${ii},event)" title="Click to cycle status">${checkText}</div>
+      <div class="item-risk-dot" style="background:${rc}" title="${item.risk||"high"} risk"></div>
+      <div class="item-title-text" id="title-disp-${pi}-${ii}">${item.title}</div>
+      <input class="item-title-input" id="title-inp-${pi}-${ii}" value="${esc(item.title)}" oninput="saveTitle(${pi},${ii},this.value)" onclick="event.stopPropagation()">
+      <div class="item-badges">${badges}</div>
+      ${item.owner?`<div class="item-owner-badge" title="${esc(item.owner)}">${esc(item.owner)}</div>`:""}
+      <div class="item-est">${item.est||""}</div>
+      <button class="item-expand-btn" id="expand-btn-${pi}-${ii}" onclick="event.stopPropagation();toggleItem(${pi},${ii})">▼ View steps</button>
+      <button class="item-del-btn" onclick="event.stopPropagation();delItemPrompt(${pi},${ii})" title="Delete item">✕</button>
+    </div>
+
+    <!-- INLINE NOTE — always visible -->
+    <div class="item-note-row">
+      <span class="item-note-icon">📝</span>
+      <textarea class="item-note-inline" id="note-inline-${pi}-${ii}" placeholder="Add a note..." rows="1" oninput="autoResize(this);saveItemNote(${pi},${ii},this.value)">${esc(item.note||"")}</textarea>
+      <span class="item-note-saved" id="note-saved-${pi}-${ii}">✓</span>
+    </div>
+
+    <!-- EXPANDED BODY -->
+    <div class="item-body" id="item-body-${pi}-${ii}">
+      <!-- STATUS TOGGLE -->
+      <div class="item-body-status">
+        <div class="item-body-status-label">Status</div>
+        <div class="status-pills">
+          <button class="spill-btn${item.status==="todo"?" active-todo":""}" data-s="todo" onclick="setStatus(${pi},${ii},'todo')">To do</button>
+          <button class="spill-btn${item.status==="inplace"?" active-inplace":""}" data-s="inplace" onclick="setStatus(${pi},${ii},'inplace')">In place</button>
+          <button class="spill-btn${item.status==="verified"?" active-verified":""}" data-s="verified" onclick="setStatus(${pi},${ii},'verified')">✓ Verified</button>
+          <button class="spill-btn${item.status==="notreq"?" active-notreq":""}" data-s="notreq" onclick="setStatus(${pi},${ii},'notreq')">— Not Required</button>
+        </div>
+        ${item.verifiedAt?'<span class="verified-stamp">✓ Verified '+item.verifiedAt+'</span>':'<span class="verified-stamp"></span>'}
+      </div>
+      <!-- NOT REQUIRED REASON in body -->
+      <div class="notreq-reason-body" id="nrb-${pi}-${ii}" style="display:${item.status==='notreq'?'block':'none'};padding:.5rem .875rem;border-bottom:1px solid var(--border);background:rgba(107,114,128,0.05)">
+        <div style="font-family:var(--mono);font-size:9px;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem">Reason not required</div>
+        <textarea style="width:100%;background:transparent;border:none;border-bottom:1px solid rgba(107,114,128,0.3);font-family:var(--body);font-size:12px;color:#9CA3AF;outline:none;resize:none;min-height:24px;line-height:1.5;font-style:italic" placeholder="e.g. not licensed, handled by another team, out of scope..." oninput="saveNotreqReason(${pi},${ii},this.value)">${esc(item.notreqReason||"")}</textarea>
+      </div>
+      <!-- META -->
+      <div class="item-body-meta">
+        <div class="meta-field">
+          <div class="meta-label">Risk rating</div>
+          <div class="risk-pills">
+            ${RISKS.map(r=>`<button class="risk-pill" data-r="${r}" onclick="setRisk(${pi},${ii},'${r}')" style="background:${item.risk===r?rd:"transparent"};border-color:${item.risk===r?rc+"66":"var(--border)"};color:${item.risk===r?rc:"var(--text3)"}">${r}</button>`).join("")}
+          </div>
+        </div>
+        <div class="meta-field">
+          <div class="meta-label">Owner</div>
+          <input class="meta-input" value="${esc(item.owner||"")}" placeholder="Assign to..." oninput="saveOwner(${pi},${ii},this.value)">
+        </div>
+        <div class="meta-field">
+          <div class="meta-label">Est. time</div>
+          <input class="meta-input" value="${esc(item.est||"")}" placeholder="e.g. 30 min" oninput="saveEst(${pi},${ii},this.value)">
+        </div>
+        <div class="meta-field">
+          <div class="meta-label">Evidence</div>
+          <textarea class="meta-input" placeholder="Links, ticket numbers, references..." oninput="saveEvidence(${pi},${ii},this.value)" style="min-height:44px;resize:vertical">${esc(item.evidence||"")}</textarea>
+        </div>
+      </div>
+      <!-- WHY -->
+      <div class="item-body-why">
+        <div class="why-icon">🎯</div>
+        <div style="flex:1">
+          <div class="why-label-sm">Why this matters</div>
+          <div class="why-text-display" id="why-disp-${pi}-${ii}">${item.why||"No description yet."}</div>
+          <textarea class="why-text-edit" id="why-edit-${pi}-${ii}" oninput="saveWhy(${pi},${ii},this.value);document.getElementById('why-disp-${pi}-${ii}').textContent=this.value">${esc(item.why||"")}</textarea>
+        </div>
+      </div>
+      <!-- STEPS -->
+      <div class="item-body-steps">
+        <div class="steps-header-row">
+          <div class="steps-lbl">Step-by-step procedure</div>
+          <button class="add-step-btn" id="add-step-${pi}-${ii}" onclick="addStep(${pi},${ii})">+ Add step</button>
+        </div>
+        <div id="steps-${pi}-${ii}">${stepsHtml}</div>
+        ${item.tip?`<div class="callout ct" style="margin-top:.75rem"><div class="c-icon">💡</div><div>${item.tip}</div></div>`:""}
+        ${item.warn?`<div class="callout cw" style="margin-top:.5rem"><div class="c-icon">⚠️</div><div>${item.warn}</div></div>`:""}
+      </div>
+      <!-- MOVE CONTROLS -->
+      <div class="item-move-row" id="move-row-${pi}-${ii}">
+        <span class="move-lbl">Move:</span>
+        <select class="move-sel" id="move-sel-${pi}-${ii}">${phaseOptions}</select>
+        <button class="move-btn-sm" onclick="moveItem(${pi},${ii})">To phase</button>
+        <button class="move-btn-sm dup-btn" onclick="duplicateItem(${pi},${ii})">Duplicate</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderPhase(ph,pi){
+  const total=ph.items.length;
+  const ver=ph.items.filter(i=>i.status==="verified").length;
+  const pct=total?Math.round(ver/total*100):0;
+  const phColor=ph.color||"#4F8EF7";
+
+  return `
+  <div class="phase-block" id="phase-block-${pi}">
+    <div class="phase-header">
+      <div class="phase-icon-wrap" style="background:${phColor}18;color:${phColor}">${ph.icon||"📌"}</div>
+      <div class="phase-info">
+        <div class="phase-name" id="phase-name-disp-${pi}">${ph.name}</div>
+        <input class="phase-name-input" id="phase-name-inp-${pi}" value="${esc(ph.name)}" oninput="savePhaseName(${pi},this.value)">
+        <div class="phase-meta">
+          <span class="phase-count-badge">${total} items</span>
+          <div class="phase-progress-mini">
+            <div class="phase-prog-bar"><div class="phase-prog-fill" style="width:${pct}%"></div></div>
+            <span class="phase-prog-pct">${pct}% verified</span>
+          </div>
+        </div>
+      </div>
+      <!-- PHASE NOTE — inline always visible -->
+      <div class="phase-note-row">
+        <textarea class="phase-note-inline" placeholder="Phase notes..." rows="1" oninput="autoResize(this);savePhaseNote(${pi},this.value)">${esc(ph.note||"")}</textarea>
+      </div>
+      <div class="phase-actions">
+        ${editMode?`<button class="ph-action-btn del" onclick="delPhasePrompt(${pi})" title="Delete phase">✕</button>`:""}
+        <button class="ph-collapse-btn" onclick="togglePhase(${pi})">Collapse</button>
+      </div>
+    </div>
+    <div class="items-container">
+      ${ph.items.map((item,ii)=>renderItem(ph,pi,item,ii)).join("")}
+      <div class="add-item-row" id="add-item-row-${pi}">
+        <button class="add-item-btn-inline" onclick="openAddItem(${pi})">+ Add item to ${esc(ph.name)}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+
+function renderProcess(proc,i){
+  const stepsHtml=(proc.procedure||[]).map((st,si)=>`
+    <div class="step">
+      <div class="step-num">${si+1}</div>
+      <div class="step-body">
+        <div class="step-h">${st.h}</div>
+        <div class="step-b">${st.b}</div>
+      </div>
+    </div>`).join("");
+  return `
+  <div class="item-row" id="proc-row-${i}" style="border-left:3px solid ${proc.color||"#64748B"}">
+    <div class="item-header" onclick="toggleProcess(${i})">
+      <div class="item-risk-dot" style="background:${proc.color||"#64748B"}"></div>
+      <div class="item-title-text">${proc.title}</div>
+      <div class="item-badges"><span class="ibadge" style="background:${proc.color||"#64748B"}22;border:1px solid ${proc.color||"#64748B"}44;color:${proc.color||"#64748B"}">${proc.trigger}</span></div>
+      <button class="item-expand-btn" id="proc-expand-${i}">▼ View procedure</button>
+    </div>
+    <div class="item-note-row">
+      <span class="item-note-icon">📝</span>
+      <textarea class="item-note-inline" placeholder="Add a note..." rows="1" oninput="autoResize(this);saveProcNote(${i},this.value)">${esc(proc.note||"")}</textarea>
+    </div>
+    <div class="item-body" id="proc-body-${i}">
+      <div class="item-body-why">
+        <div class="why-icon">🎯</div>
+        <div><div class="why-label-sm">Why this matters</div><div class="why-text-display">${proc.why||""}</div></div>
+      </div>
+      <div class="item-body-steps">
+        <div class="steps-header-row"><div class="steps-lbl">Procedure — triggered by: ${proc.trigger}</div></div>
+        <div>${stepsHtml}</div>
+        ${proc.tip?`<div class="callout ct" style="margin-top:.75rem"><div class="c-icon">💡</div><div>${proc.tip}</div></div>`:""}
+        ${proc.warn?`<div class="callout cw" style="margin-top:.5rem"><div class="c-icon">⚠️</div><div>${proc.warn}</div></div>`:""}
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleProcess(i){
+  const body=document.getElementById("proc-body-"+i);
+  const btn=document.getElementById("proc-expand-"+i);
+  if(!body)return;
+  const isOpen=body.classList.toggle("open");
+  if(btn)btn.textContent=isOpen?"▲ Hide procedure":"▼ View procedure";
+}
+function saveProcNote(i,val){if(store.process&&store.process[i]){store.process[i].note=val;saveStore();}}
+
+function renderOpsItem(task,i){
+  const s=getOpsStatus(task);
+  const statusColors={ontrack:"var(--green)",due:"var(--amber)",overdue:"var(--red)",never:"var(--text3)"};
+  const statusLabels={ontrack:"On track",due:"Due soon",overdue:"Overdue",never:"Never run"};
+  const color=statusColors[s]; const label=statusLabels[s];
+  const days=getOpsDue(task);
+  let dueText=days===null?"Never run":days<0?`Overdue by ${Math.abs(days)}d`:days===0?"Due today":`Due in ${days}d`;
+  const histHtml=task.history&&task.history.length
+    ?[...task.history].reverse().slice(0,3).map(e=>`<div class="sc-entry"><div class="sc-entry-dot"></div><span class="sc-entry-date">${e.date}</span>${e.note?`<span class="sc-entry-note"> — ${e.note}</span>`:""}</div>`).join("")
+    :`<div style="font-size:10px;color:var(--text3);font-style:italic">No completions logged yet.</div>`;
+  const stepsHtml=(task.steps||[]).map((st,si)=>`
+    <div class="step">
+      <div class="step-num">${si+1}</div>
+      <div class="step-body">
+        <div class="step-h">${st.h}</div>
+        <div class="step-b">${st.b}</div>
+      </div>
+    </div>`).join("");
+  return `
+  <div class="item-row" id="ops-row-${i}" style="border-left:3px solid ${color}">
+    <div class="item-header" onclick="toggleOps(${i})">
+      <div class="item-risk-dot" style="background:${color}"></div>
+      <div class="item-title-text">${task.title}</div>
+      <div class="item-badges">
+        <span class="ibadge" style="background:${color}22;border:1px solid ${color}44;color:${color}">${task.cadenceLabel}</span>
+        <span class="ibadge" style="background:${color}22;border:1px solid ${color}44;color:${color}">${label} — ${dueText}</span>
+      </div>
+      <button class="item-expand-btn" id="ops-expand-${i}">▼ View steps</button>
+      <button class="log-btn-sm" onclick="event.stopPropagation();openOpsLog(${i})" style="background:var(--blue);color:white;border:none;border-radius:4px;padding:2px 8px;font-family:var(--mono);font-size:9px;cursor:pointer;flex-shrink:0;white-space:nowrap">✓ Log</button>
+    </div>
+    <div class="item-body" id="ops-body-${i}">
+      <div style="padding:.75rem .875rem;border-bottom:1px solid var(--border);background:${color}08">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:.5rem;flex-wrap:wrap">
+          <div><div style="font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;margin-bottom:.2rem">Cadence</div><div style="font-size:12px;font-weight:600;color:var(--text)">${task.cadenceLabel}</div></div>
+          <div><div style="font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;margin-bottom:.2rem">Status</div><div style="font-size:12px;font-weight:600;color:${color}">${dueText}</div></div>
+          <button onclick="openOpsLog(${i})" style="background:var(--blue);color:white;border:none;border-radius:6px;padding:.45rem 1rem;font-family:var(--display);font-size:12px;font-weight:700;cursor:pointer;margin-left:auto">✓ Log completed</button>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);text-transform:uppercase;margin-bottom:.35rem">Completion history (last 3)</div>
+        ${histHtml}
+      </div>
+      <div class="item-body-why"><div class="why-icon">🎯</div><div><div class="why-label-sm">Why this matters</div><div class="why-text-display">${task.why}</div></div></div>
+      <div class="item-body-steps">
+        <div class="steps-header-row"><div class="steps-lbl">Procedure</div></div>
+        <div>${stepsHtml}</div>
+        ${task.tip?`<div class="callout ct" style="margin-top:.75rem"><div class="c-icon">💡</div><div>${task.tip}</div></div>`:""}
+        ${task.warn?`<div class="callout cw" style="margin-top:.5rem"><div class="c-icon">⚠️</div><div>${task.warn}</div></div>`:""}
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleOps(i){
+  const body=document.getElementById("ops-body-"+i);
+  const btn=document.getElementById("ops-expand-"+i);
+  if(!body)return;
+  const isOpen=body.classList.toggle("open");
+  if(btn)btn.textContent=isOpen?"▲ Hide steps":"▼ View steps";
+}
+
+let pendingOpsLog=null;
+function openOpsLog(i){
+  pendingOpsLog=i;
+  const task=store.ops[i]||DEFAULT_OPS[i];
+  document.getElementById("log-modal-sub").textContent=task.title+" · "+task.cadenceLabel;
+  document.getElementById("log-note").value="";
+  om("log-modal"); setTimeout(()=>document.getElementById("log-note")?.focus(),40);
+}
+function confirmOpsLog(){
+  if(pendingOpsLog===null)return;
+  const i=pendingOpsLog;
+  if(!store.ops)store.ops=DEFAULT_OPS.map(t=>({...t,history:[]}));
+  if(!store.ops[i])store.ops[i]={...DEFAULT_OPS[i],history:[]};
+  if(!store.ops[i].history)store.ops[i].history=[];
+  const note=document.getElementById("log-note")?.value.trim()||"";
+  store.ops[i].history.push({date:today(),note});
+  saveStore(); cm("log-modal"); pendingOpsLog=null;
+  // Re-render just that ops item
+  const row=document.getElementById("ops-row-"+i);
+  if(row){const task=store.ops[i];row.outerHTML=renderOpsItem(task,i);}
+  updateProgress();
+}
+
+function getOpsStatus(task){
+  if(!task.history||!task.history.length)return"never";
+  const days=Math.floor((Date.now()-new Date(task.history[task.history.length-1].date))/(86400000));
+  if(days>task.cadenceDays+3)return"overdue";
+  if(days>task.cadenceDays-3)return"due";
+  return"ontrack";
+}
+function getOpsDue(task){
+  if(!task.history||!task.history.length)return null;
+  return Math.ceil((new Date(task.history[task.history.length-1].date).getTime()+task.cadenceDays*86400000-Date.now())/86400000);
+}
+
+
+function renderAll(){
+  const page=document.getElementById("page");
+  // Build merged ops (store overrides for history)
+  const opsTasks=(store.ops||DEFAULT_OPS).map((t,i)=>({...DEFAULT_OPS[i],...t}));
+  const procItems=(store.process||DEFAULT_PROCESS);
+  
+  page.innerHTML=
+    store.phases.map((ph,pi)=>renderPhase(ph,pi)).join("") +
+    `<div class="phase-block" id="phase-block-process">
+      <div class="phase-header">
+        <div class="phase-icon-wrap" style="background:#A78BFA22;color:#A78BFA">📋</div>
+        <div class="phase-info">
+          <div class="phase-name">Process Track — Event-driven Procedures</div>
+          <div class="phase-meta"><span class="phase-count-badge">${procItems.length} processes</span><span class="phase-count-badge" style="color:#A78BFA;border-color:#A78BFA44">Triggered by HR/IT events</span></div>
+        </div>
+        <div class="phase-note-row"><textarea class="phase-note-inline" placeholder="Notes about process track..." rows="1" oninput="autoResize(this)"></textarea></div>
+        <div class="phase-actions"><button class="ph-collapse-btn" onclick="togglePhase('process')">Collapse</button></div>
+      </div>
+      <div class="items-container">${procItems.map((p,i)=>renderProcess(p,i)).join("")}</div>
+    </div>` +
+    `<div class="phase-block" id="phase-block-ops">
+      <div class="phase-header">
+        <div class="phase-icon-wrap" style="background:#F59E0B22;color:#F59E0B">🔁</div>
+        <div class="phase-info">
+          <div class="phase-name">Operations Track — Recurring Tasks</div>
+          <div class="phase-meta"><span class="phase-count-badge">${opsTasks.length} tasks</span><span class="phase-count-badge" style="color:var(--red);border-color:rgba(248,113,113,.3)">${opsTasks.filter(t=>getOpsStatus(t)==="overdue").length} overdue</span></div>
+        </div>
+        <div class="phase-note-row"><textarea class="phase-note-inline" placeholder="Notes about operations track..." rows="1" oninput="autoResize(this)"></textarea></div>
+        <div class="phase-actions"><button class="ph-collapse-btn" onclick="togglePhase('ops')">Collapse</button></div>
+      </div>
+      <div class="items-container">${opsTasks.map((t,i)=>renderOpsItem(t,i)).join("")}</div>
+    </div>`;
+
+  // Apply edit mode to all items after render
+  store.phases.forEach((ph,pi)=>{
+    ph.items.forEach((item,ii)=>{
+      applyEditToItem(pi,ii);
+    });
+  });
+
+  updateProgress();
+  applyFilters();
+
+  // Auto-resize all note textareas
+  document.querySelectorAll(".item-note-inline,.phase-note-inline").forEach(autoResize);
+}
+
+function applyEditToItem(pi,ii){
+  const row=document.getElementById(`item-row-${pi}-${ii}`); if(!row)return;
+  const titleDisp=document.getElementById(`title-disp-${pi}-${ii}`);
+  const titleInp=document.getElementById(`title-inp-${pi}-${ii}`);
+  const moveRow=document.getElementById(`move-row-${pi}-${ii}`);
+  const addStepBtn=document.getElementById(`add-step-${pi}-${ii}`);
+  const delBtn=row.querySelector(".item-del-btn");
+  const phNameDisp=document.getElementById(`phase-name-disp-${pi}`);
+  const phNameInp=document.getElementById(`phase-name-inp-${pi}`);
+  const whyDisp=document.getElementById(`why-disp-${pi}-${ii}`);
+  const whyEdit=document.getElementById(`why-edit-${pi}-${ii}`);
+  const addItemRow=document.getElementById(`add-item-row-${pi}`);
+
+  if(titleDisp)titleDisp.style.display=editMode?"none":"block";
+  if(titleInp)titleInp.style.display=editMode?"block":"none";
+  if(moveRow)moveRow.classList.toggle("vis",editMode);
+  if(addStepBtn)addStepBtn.classList.toggle("visible",editMode);
+  if(delBtn)delBtn.classList.toggle("visible",editMode);
+  if(whyDisp)whyDisp.style.display=editMode?"none":"block";
+  if(whyEdit)whyEdit.style.display=editMode?"block":"none";
+  if(phNameDisp)phNameDisp.style.display=editMode?"none":"block";
+  if(phNameInp)phNameInp.style.display=editMode?"block":"none";
+  if(addItemRow)addItemRow.classList.toggle("vis",editMode);
+  applyEditToSteps(pi,ii);
+}
+
+// ============ AUTO RESIZE TEXTAREA ============
+function autoResize(el){
+  el.style.height="auto";
+  el.style.height=Math.min(el.scrollHeight,120)+"px";
+}
+
+// ============ EXPORT / IMPORT ============
+function exportConfig(){
+  const blob=new Blob([JSON.stringify({version:"6",exported:new Date().toISOString(),store},null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="endpoint-runbook-"+today()+".json"; a.click(); URL.revokeObjectURL(a.href);
+}
+function importConfig(e){
+  const file=e.target.files[0]; if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(data.store){store=data.store;saveStore();}
+      renderAll(); alert("Imported successfully.");
+    }catch(err){alert("Import failed — invalid JSON.");}
+  };
+  r.readAsText(file); e.target.value="";
+}
+
+// ============ SETTINGS RESET ============
+function resetPrompt(type){
+  pendingReset=type;
+  document.getElementById("reset-title").textContent=type==="soft"?"Reset to defaults?":"Wipe all data?";
+  document.getElementById("reset-desc").textContent=type==="soft"
+    ?"All items restored to defaults. Statuses, notes, and evidence are erased."
+    :"Everything permanently deleted. Returns to factory state.";
+  document.getElementById("reset-input").value="";
+  om("reset-modal");
+}
+function doReset(){
+  if(document.getElementById("reset-input")?.value.trim()!=="CONFIRM"){alert("Type CONFIRM to proceed.");return;}
+  localStorage.removeItem(SK); store=buildDefault(); saveStore();
+  cm("reset-modal"); renderAll();
+}
+
+// ============ QUICK SEARCH ============
+function openQS(){ om("qs-overlay"); document.getElementById("qs-input").value=""; renderQs(""); setTimeout(()=>document.getElementById("qs-input")?.focus(),40); }
+function closeQS(){ cm("qs-overlay"); }
+document.getElementById("qs-input")?.addEventListener("input",e=>renderQs(e.target.value));
+document.getElementById("qs-overlay")?.addEventListener("click",e=>{if(e.target===e.currentTarget)closeQS();});
+
+function renderQs(q){
+  qsFocus=0; const sq=q.toLowerCase();
+  const results=[];
+  store.phases.forEach((ph,pi)=>{
+    ph.items.forEach((item,ii)=>{
+      const match=!sq||item.title.toLowerCase().includes(sq)||(item.note||"").toLowerCase().includes(sq)||(item.steps||[]).some(s=>s.h.toLowerCase().includes(sq)||s.b.toLowerCase().includes(sq));
+      if(match) results.push({ph:ph.name,phColor:ph.color,title:item.title,status:item.status,pi,ii});
+    });
+  });
+  const el=document.getElementById("qs-results"); if(!el)return;
+  if(!results.length){el.innerHTML='<div class="qs-empty">No results'+(q?' for "'+q+'"':'')+'</div>';return;}
+  const statusColors={verified:"var(--green)",inplace:"var(--amber)",todo:"var(--text3)"};
+  el.innerHTML=results.slice(0,12).map((r,i)=>`
+    <div class="qs-result${i===0?" focused":""}" data-pi="${r.pi}" data-ii="${r.ii}">
+      <span class="qs-r-phase" style="color:${r.phColor||"var(--blue)"}">${r.ph}</span>
+      <span class="qs-r-title">${r.title}</span>
+      <div class="qs-r-status" style="background:${statusColors[r.status]};border-color:${statusColors[r.status]}"></div>
+    </div>`).join("");
+  el.querySelectorAll(".qs-result").forEach(r=>{
+    r.addEventListener("click",()=>{
+      closeQS();
+      const pi=parseInt(r.dataset.pi); const ii=parseInt(r.dataset.ii);
+      const el=document.getElementById(`item-row-${pi}-${ii}`);
+      if(el){
+        el.scrollIntoView({behavior:"smooth",block:"center"});
+        // Open the item body
+        const body=document.getElementById(`item-body-${pi}-${ii}`);
+        const btn=document.getElementById(`expand-btn-${pi}-${ii}`);
+        if(body&&!body.classList.contains("open")){body.classList.add("open");if(btn)btn.textContent="▲ Hide steps";}
+        // Flash highlight
+        el.style.outline="2px solid var(--blue)"; setTimeout(()=>el.style.outline="",1500);
+      }
+    });
+  });
+}
+
+// ============ SCROLL TO TOP ============
+function scrollTop(){window.scrollTo({top:0,behavior:"smooth"});}
+window.addEventListener("scroll",()=>{
+  const btn=document.getElementById("toc-btn");
+  if(btn)btn.style.display=window.scrollY>400?"flex":"none";
+});
+
+// ============ KEYBOARD ============
+document.addEventListener("keydown",e=>{
+  const tag=document.activeElement.tagName; const inField=tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT";
+  if(e.key==="/"&&!inField&&!e.ctrlKey&&!e.metaKey){e.preventDefault();openQS();return;}
+  if(e.key==="Escape"){document.querySelectorAll(".modal-overlay.open,.settings-overlay.open,.qs-overlay.open").forEach(m=>m.classList.remove("open"));return;}
+  if(e.key.toLowerCase()==="e"&&!inField&&!e.ctrlKey&&!e.metaKey){toggleEdit();return;}
+  const qsOpen=document.getElementById("qs-overlay")?.classList.contains("open");
+  if(qsOpen){
+    const rs=document.querySelectorAll(".qs-result");
+    if(e.key==="ArrowDown"){e.preventDefault();rs[qsFocus]?.classList.remove("focused");qsFocus=Math.min(qsFocus+1,rs.length-1);rs[qsFocus]?.classList.add("focused");rs[qsFocus]?.scrollIntoView({block:"nearest"});}
+    if(e.key==="ArrowUp"){e.preventDefault();rs[qsFocus]?.classList.remove("focused");qsFocus=Math.max(qsFocus-1,0);rs[qsFocus]?.classList.add("focused");rs[qsFocus]?.scrollIntoView({block:"nearest"});}
+    if(e.key==="Enter")rs[qsFocus]?.click();
+  }
+});
+
+// Alias log confirm
+function confirmLog(){confirmOpsLog();}
+
+// ============ INIT ============
+renderAll();
+
+</script>
+</body>
+</html>
